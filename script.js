@@ -1,28 +1,21 @@
 // DOM Elements
-const sidebar = document.getElementById('sidebar');
-const hamburgerBtn = document.getElementById('hamburger-btn');
-const mainContent = document.getElementById('main-content');
-const menuItems = document.querySelectorAll('.menu-item');
-const pages = document.querySelectorAll('.page');
 const linkInput = document.getElementById('link');
 const pesanInput = document.getElementById('pesan');
 const jumlahInput = document.getElementById('jumlah');
 const jumlahRange = document.getElementById('jumlah-range');
 const kirimBtn = document.getElementById('kirim');
 const resetBtn = document.getElementById('reset');
-const loadingIndicator = document.getElementById('loading-indicator');
-const progressMiniFill = document.getElementById('progress-mini-fill');
-const progressPercent = document.getElementById('progress-percent');
 const progressFill = document.getElementById('progress-fill');
 const progressText = document.getElementById('progress-text');
 const logContent = document.getElementById('log-content');
 const clearLogBtn = document.getElementById('clear-log');
-const refreshStatusBtn = document.getElementById('refresh-status');
-const statusTitle = document.getElementById('status-title');
-const statusDesc = document.getElementById('status-desc');
-const totalSent = document.getElementById('total-sent');
-const totalSuccess = document.getElementById('total-success');
-const totalFailed = document.getElementById('total-failed');
+const loadingModal = document.getElementById('loading-modal');
+const successModal = document.getElementById('success-modal');
+const closeSuccessBtn = document.getElementById('close-success');
+const modalProgressFill = document.getElementById('modal-progress-fill');
+const modalProgressText = document.getElementById('modal-progress-text');
+const loadingDetail = document.getElementById('loading-detail');
+const successMessage = document.getElementById('success-message');
 
 // State variables
 let isSending = false;
@@ -31,31 +24,12 @@ let totalToSend = 0;
 let failedCount = 0;
 let logs = [];
 let currentRetryCount = 0;
-const MAX_RETRIES = 2;
-const REQUEST_DELAY = 500;
+const MAX_RETRIES = 2; // Maksimal percobaan ulang per pesan
+const REQUEST_DELAY = 500; // Delay antar request (ms)
 
 // Initialize
 function init() {
-    // Sidebar toggle
-    hamburgerBtn.addEventListener('click', toggleSidebar);
-    
-    // Menu navigation
-    menuItems.forEach(item => {
-        item.addEventListener('click', (e) => {
-            e.preventDefault();
-            const page = item.getAttribute('data-page');
-            switchPage(page);
-            menuItems.forEach(i => i.classList.remove('active'));
-            item.classList.add('active');
-            
-            // Close sidebar on mobile after clicking
-            if (window.innerWidth <= 1024) {
-                sidebar.classList.remove('active');
-            }
-        });
-    });
-    
-    // Form inputs sync
+    // Sync range and number input
     jumlahRange.addEventListener('input', () => {
         jumlahInput.value = jumlahRange.value;
     });
@@ -72,103 +46,61 @@ function init() {
     kirimBtn.addEventListener('click', startSending);
     resetBtn.addEventListener('click', resetForm);
     clearLogBtn.addEventListener('click', clearLogs);
-    refreshStatusBtn.addEventListener('click', refreshStatus);
+    closeSuccessBtn.addEventListener('click', () => {
+        successModal.classList.remove('active');
+    });
     
-    // Load saved data
-    loadLogs();
-    loadStats();
+    // Update status indicator
     updateStatusIndicator();
     
-    // Close sidebar when clicking outside on mobile
-    document.addEventListener('click', (e) => {
-        if (window.innerWidth <= 1024 && 
-            !sidebar.contains(e.target) && 
-            !hamburgerBtn.contains(e.target) &&
-            sidebar.classList.contains('active')) {
-            sidebar.classList.remove('active');
-        }
-    });
-}
-
-// Toggle sidebar
-function toggleSidebar() {
-    sidebar.classList.toggle('active');
-}
-
-// Switch between pages
-function switchPage(pageName) {
-    pages.forEach(page => {
-        page.classList.remove('active');
-        if (page.id === `${pageName}-page`) {
-            page.classList.add('active');
-        }
-    });
+    // Load saved logs from localStorage
+    loadLogs();
 }
 
 // Update status indicator
 function updateStatusIndicator() {
+    const statusIcon = document.querySelector('.status-icon i');
+    const statusTitle = document.querySelector('.status-text h3');
+    const statusDesc = document.querySelector('.status-text p');
+    
     if (totalToSend > 0 && (sentCount + failedCount) === totalToSend) {
+        statusIcon.className = 'fas fa-check-circle';
+        statusIcon.parentElement.style.color = '#38ef7d';
         statusTitle.textContent = 'Selesai';
         if (failedCount > 0) {
             statusDesc.textContent = `Berhasil: ${sentCount}, Gagal: ${failedCount} dari ${totalToSend} pesan`;
         } else {
             statusDesc.textContent = `Berhasil mengirim ${sentCount} pesan`;
         }
-        
-        // Update icon
-        const statusIcon = document.querySelector('.status-icon i');
-        if (failedCount > 0) {
-            statusIcon.className = 'fas fa-exclamation-triangle';
-        } else {
-            statusIcon.className = 'fas fa-check-circle';
-        }
     } else if (isSending) {
+        statusIcon.className = 'fas fa-sync-alt fa-spin';
+        statusIcon.parentElement.style.color = '#4776E6';
         statusTitle.textContent = 'Mengirim...';
         statusDesc.textContent = `Progress: ${sentCount + failedCount}/${totalToSend} (${failedCount} gagal)`;
-        
-        // Update icon
-        const statusIcon = document.querySelector('.status-icon i');
-        statusIcon.className = 'fas fa-sync-alt fa-spin';
     } else {
+        statusIcon.className = 'fas fa-clock';
+        statusIcon.parentElement.style.color = '#4776E6';
         statusTitle.textContent = 'Menunggu';
         statusDesc.textContent = 'Belum ada pengiriman pesan';
-        
-        // Update icon
-        const statusIcon = document.querySelector('.status-icon i');
-        statusIcon.className = 'fas fa-clock';
     }
-    
-    // Update progress bar
-    if (totalToSend > 0) {
-        const completed = sentCount + failedCount;
-        const progress = Math.round((completed / totalToSend) * 100);
-        progressFill.style.width = `${progress}%`;
-        progressText.textContent = `${progress}% (${completed}/${totalToSend})`;
-    }
-    
-    // Update stats
-    totalSent.textContent = sentCount + failedCount;
-    totalSuccess.textContent = sentCount;
-    totalFailed.textContent = failedCount;
 }
 
-// Delay function
+// Fungsi untuk delay dengan promise
 function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Send single message with retry logic
+// Fungsi untuk mengirim satu pesan dengan retry logic
 async function sendSingleMessage(apiUrl, messageNumber, totalMessages) {
     let retries = 0;
     
     while (retries <= MAX_RETRIES) {
         try {
-            // Update loading indicator
-            progressPercent.textContent = `${Math.round(((sentCount + failedCount) / totalToSend) * 100)}%`;
-            progressMiniFill.style.width = `${((sentCount + failedCount) / totalToSend) * 100}%`;
-            
+            // Tambah timeout untuk fetch request (8 detik)
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 8000);
+            
+            loadingDetail.textContent = `Mengirim pesan ${messageNumber} dari ${totalMessages}${retries > 0 ? ` (Percobaan ${retries + 1})` : ''}`;
             
             const response = await fetch(apiUrl, {
                 method: 'GET',
@@ -181,29 +113,36 @@ async function sendSingleMessage(apiUrl, messageNumber, totalMessages) {
             if (response.ok) {
                 return { success: true, message: `Pesan ${messageNumber} berhasil dikirim` };
             } else {
+                // Jika response tidak OK, coba lagi
                 if (retries < MAX_RETRIES) {
-                    await delay(1000);
+                    addLog(`Pesan ${messageNumber} gagal (HTTP ${response.status}), mencoba lagi...`, 'warning');
+                    await delay(1000); // Tunggu 1 detik sebelum retry
                     retries++;
                     continue;
                 }
                 return { 
                     success: false, 
-                    message: `Pesan ${messageNumber} gagal (HTTP ${response.status})` 
+                    message: `Pesan ${messageNumber} gagal dikirim (HTTP ${response.status})` 
                 };
             }
         } catch (error) {
+            // Handle berbagai jenis error
             let errorMessage = `Pesan ${messageNumber} gagal: `;
             
             if (error.name === 'AbortError') {
-                errorMessage += 'Timeout';
+                errorMessage += 'Timeout (request terlalu lama)';
             } else if (error.message.includes('Failed to fetch')) {
-                errorMessage += 'Gagal terhubung';
+                errorMessage += 'Gagal terhubung ke server. Cek koneksi internet.';
+            } else if (error.message.includes('NetworkError')) {
+                errorMessage += 'Masalah jaringan. Cek koneksi Anda.';
             } else {
                 errorMessage += error.message;
             }
             
+            // Coba lagi jika belum mencapai maksimal retry
             if (retries < MAX_RETRIES) {
-                await delay(1500);
+                addLog(`${errorMessage}, mencoba lagi...`, 'warning');
+                await delay(1500); // Tunggu lebih lama untuk network error
                 retries++;
                 continue;
             }
@@ -216,7 +155,7 @@ async function sendSingleMessage(apiUrl, messageNumber, totalMessages) {
 // Start sending messages
 async function startSending() {
     if (isSending) {
-        addLog('Pengiriman sudah berjalan', 'error');
+        addLog('Pengiriman sudah berjalan, tunggu hingga selesai', 'error');
         return;
     }
     
@@ -229,6 +168,15 @@ async function startSending() {
         addLog('Link NGL tidak boleh kosong', 'error');
         linkInput.focus();
         return;
+    }
+    
+    if (!link.includes('ngl.link')) {
+        if (confirm('Link tidak mengandung "ngl.link". Apakah ini link NGL yang valid?')) {
+            // Lanjutkan jika user yakin
+        } else {
+            linkInput.focus();
+            return;
+        }
     }
     
     if (!pesan) {
@@ -244,7 +192,9 @@ async function startSending() {
     }
     
     if (jumlah > 100) {
-        if (!confirm(`Mengirim ${jumlah} pesan sekaligus? Ini mungkin memakan waktu lama.`)) {
+        const confirmed = confirm(`Anda akan mengirim ${jumlah} pesan. Ini mungkin akan memakan waktu lama dan bisa dianggap spam. Lanjutkan?`);
+        if (!confirmed) {
+            addLog('Pengiriman dibatalkan oleh pengguna', 'info');
             return;
         }
     }
@@ -254,35 +204,36 @@ async function startSending() {
     sentCount = 0;
     failedCount = 0;
     totalToSend = jumlah;
-    
-    // Switch to status page
-    switchPage('status');
-    menuItems.forEach(item => {
-        item.classList.remove('active');
-        if (item.getAttribute('data-page') === 'status') {
-            item.classList.add('active');
-        }
-    });
-    
-    // Show loading indicator
-    loadingIndicator.classList.add('active');
+    currentRetryCount = 0;
     
     // Update UI
     updateStatusIndicator();
+    updateProgress(0);
+    
+    // Show loading modal
+    kirimBtn.innerHTML="⏳ Mengirim...";
+kirimBtn.disabled=true;
     
     // Encode parameters
     const encodedLink = encodeURIComponent(link);
     const encodedPesan = encodeURIComponent(pesan);
     
+    // Show warning for large number of messages
+    if (jumlah > 50) {
+        addLog(`⚠️ PERINGATAN: Mengirim ${jumlah} pesan sekaligus bisa menyebabkan rate limiting`, 'warning');
+        await delay(2000);
+    }
+    
     // Send messages
     for (let i = 0; i < jumlah; i++) {
         if (!isSending) {
-            addLog('Pengiriman dihentikan', 'warning');
-            break;
+            addLog('Pengiriman dihentikan oleh pengguna', 'info');
+            break; // Stop if user cancelled
         }
         
         const apiUrl = `https://api-faa.my.id/faa/ngl-spam?link=${encodedLink}&pesan=${encodedPesan}&jumlah=1`;
         
+        // Kirim pesan dengan retry logic
         const result = await sendSingleMessage(apiUrl, i + 1, jumlah);
         
         if (result.success) {
@@ -293,13 +244,23 @@ async function startSending() {
             addLog(result.message, 'error');
         }
         
-        updateStatusIndicator();
+        // Update progress
+        const completed = sentCount + failedCount;
+        const progress = Math.round((completed / jumlah) * 100);
+        updateProgress(progress);
         
-        // Delay between messages
+        // Delay antara pengiriman pesan (kecuali untuk pesan terakhir)
         if (i < jumlah - 1) {
+            // Delay dinamis berdasarkan jumlah pesan yang sudah dikirim
             let dynamicDelay = REQUEST_DELAY;
-            if (i % 10 === 9) dynamicDelay = 2000;
-            else if (i % 5 === 4) dynamicDelay = 1000;
+            if (i % 10 === 9) {
+                // Setelah setiap 10 pesan, delay lebih lama
+                dynamicDelay = 2000;
+                addLog('Istirahat sebentar untuk menghindari rate limiting...', 'info');
+            } else if (i % 5 === 4) {
+                // Setelah setiap 5 pesan, delay sedang
+                dynamicDelay = 1000;
+            }
             
             await delay(dynamicDelay);
         }
@@ -307,24 +268,53 @@ async function startSending() {
     
     // Sending complete
     isSending = false;
-    loadingIndicator.classList.remove('active');
+    loadingModal.classList.remove('active');
     
-    // Show completion message
-    let completionMsg = '';
+    // Show success/result modal
     if (failedCount === 0) {
-        completionMsg = `✅ Berhasil mengirim ${sentCount} pesan!`;
+        successMessage.innerHTML = `
+            <i class="fas fa-check-circle" style="color:#38ef7d;font-size:1.5rem;"></i>
+            <br>
+            Berhasil mengirim <strong>${sentCount} dari ${totalToSend}</strong> pesan!
+            <br>
+            <small>Semua pesan berhasil dikirim</small>
+        `;
     } else if (sentCount === 0) {
-        completionMsg = `❌ Gagal mengirim semua pesan`;
+        successMessage.innerHTML = `
+            <i class="fas fa-exclamation-triangle" style="color:#ff6b6b;font-size:1.5rem;"></i>
+            <br>
+            Gagal mengirim semua pesan (${failedCount} gagal)
+            <br>
+            <small>Cek koneksi internet atau coba lagi nanti</small>
+        `;
     } else {
-        completionMsg = `⚠️ Selesai: ${sentCount} berhasil, ${failedCount} gagal`;
+        successMessage.innerHTML = `
+            <i class="fas fa-exclamation-circle" style="color:#ffa726;font-size:1.5rem;"></i>
+            <br>
+            Selesai: <strong>${sentCount} berhasil</strong>, <strong>${failedCount} gagal</strong> dari ${totalToSend} pesan
+            <br>
+            <small>Beberapa pesan mungkin gagal karena masalah koneksi</small>
+        `;
     }
     
-    addLog(completionMsg, failedCount === 0 ? 'success' : (sentCount === 0 ? 'error' : 'warning'));
-    
-    // Save data
-    saveLogs();
-    saveStats();
+    successModal.classList.add('active');
+    kirimBtn.innerHTML="KIRIM PESAN";
+kirimBtn.disabled=false;
+
+    // Update status indicator
     updateStatusIndicator();
+    saveLogs();
+}
+
+// Update progress bars
+function updateProgress(percentage) {
+    progressFill.style.width = `${percentage}%`;
+    
+    const completed = sentCount + failedCount;
+    progressText.textContent = `${percentage}% (${completed}/${totalToSend})`;
+    
+    modalProgressFill.style.width = `${percentage}%`;
+    modalProgressText.textContent = `${percentage}%`;
 }
 
 // Add log entry
@@ -332,43 +322,52 @@ function addLog(message, type = 'info') {
     const now = new Date();
     const timeString = now.toLocaleTimeString('id-ID', { 
         hour: '2-digit', 
-        minute: '2-digit'
+        minute: '2-digit',
+        second: '2-digit'
     });
+    
+    const dateString = now.toLocaleDateString('id-ID');
     
     const logEntry = {
         message,
         type,
-        time: timeString,
+        time: `${timeString}`,
+        date: dateString,
         timestamp: now.getTime()
     };
     
-    logs.unshift(logEntry);
+    logs.unshift(logEntry); // Add to beginning of array
     
+    // Keep only last 100 logs
     if (logs.length > 100) {
         logs = logs.slice(0, 100);
     }
     
+    // Update log display
     updateLogDisplay();
 }
 
 // Update log display
 function updateLogDisplay() {
+    // Clear current log display
     logContent.innerHTML = '';
     
     if (logs.length === 0) {
         logContent.innerHTML = `
             <div class="log-empty">
                 <i class="fas fa-clipboard-list"></i>
-                <p>Belum ada aktivitas pengiriman</p>
+                <p>Log aktivitas akan muncul di sini</p>
             </div>
         `;
         return;
     }
     
+    // Add log entries
     logs.forEach(log => {
         const logItem = document.createElement('div');
         logItem.className = `log-item ${log.type}`;
         
+        // Tambah icon berdasarkan tipe log
         let icon = 'fa-info-circle';
         if (log.type === 'success') icon = 'fa-check-circle';
         if (log.type === 'error') icon = 'fa-times-circle';
@@ -376,7 +375,7 @@ function updateLogDisplay() {
         
         logItem.innerHTML = `
             <div>
-                <i class="fas ${icon}"></i>
+                <i class="fas ${icon}" style="margin-right: 8px; width: 16px;"></i>
                 ${log.message}
             </div>
             <div class="log-time">${log.time}</div>
@@ -388,24 +387,19 @@ function updateLogDisplay() {
 // Clear logs
 function clearLogs() {
     if (logs.length > 0) {
-        if (confirm('Hapus semua log?')) {
+        if (confirm('Apakah Anda yakin ingin menghapus semua log?')) {
             logs = [];
             updateLogDisplay();
             localStorage.removeItem('ngl-spam-logs');
-            addLog('Log dihapus', 'info');
+            addLog('Log berhasil dihapus', 'info');
         }
     }
-}
-
-// Refresh status
-function refreshStatus() {
-    updateStatusIndicator();
-    addLog('Status diperbarui', 'info');
 }
 
 // Save logs to localStorage
 function saveLogs() {
     try {
+        // Simpan hanya 50 log terakhir untuk menghemat space
         const logsToSave = logs.slice(0, 50);
         localStorage.setItem('ngl-spam-logs', JSON.stringify(logsToSave));
     } catch (e) {
@@ -426,46 +420,13 @@ function loadLogs() {
     }
 }
 
-// Save stats to localStorage
-function saveStats() {
-    try {
-        const stats = {
-            totalSent: sentCount + failedCount,
-            totalSuccess: sentCount,
-            totalFailed: failedCount,
-            lastUpdated: new Date().getTime()
-        };
-        localStorage.setItem('ngl-spam-stats', JSON.stringify(stats));
-    } catch (e) {
-        console.error('Gagal menyimpan stats:', e);
-    }
-}
-
-// Load stats from localStorage
-function loadStats() {
-    try {
-        const savedStats = localStorage.getItem('ngl-spam-stats');
-        if (savedStats) {
-            const stats = JSON.parse(savedStats);
-            sentCount = stats.totalSuccess || 0;
-            failedCount = stats.totalFailed || 0;
-            
-            totalSent.textContent = stats.totalSent || 0;
-            totalSuccess.textContent = stats.totalSuccess || 0;
-            totalFailed.textContent = stats.totalFailed || 0;
-        }
-    } catch (e) {
-        console.error('Gagal memuat stats:', e);
-    }
-}
-
 // Reset form
 function resetForm() {
     if (isSending) {
-        if (confirm('Hentikan pengiriman dan reset form?')) {
+        const confirmStop = confirm('Pengiriman sedang berjalan. Hentikan dan reset form?');
+        if (confirmStop) {
             isSending = false;
-            loadingIndicator.classList.remove('active');
-            addLog('Pengiriman dihentikan', 'warning');
+            addLog('Pengiriman dihentikan oleh pengguna', 'warning');
         } else {
             return;
         }
@@ -476,8 +437,36 @@ function resetForm() {
     jumlahInput.value = '2';
     jumlahRange.value = '2';
     
-    addLog('Form direset', 'info');
+    sentCount = 0;
+    failedCount = 0;
+    totalToSend = 0;
+    
+    updateProgress(0);
+    updateStatusIndicator();
+    
+    addLog('Form telah direset ke nilai default', 'info');
 }
 
-// Initialize app
+// Tambahkan event listener untuk menghentikan pengiriman dengan ESC
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && isSending) {
+        const confirmStop = confirm('Hentikan pengiriman pesan?');
+        if (confirmStop) {
+            isSending = false;
+            addLog('Pengiriman dihentikan (ESC ditekan)', 'warning');
+            loadingModal.classList.remove('active');
+            updateStatusIndicator();
+        }
+    }
+});
+// === SIDEBAR TOGGLE ===
+const menuBtn = document.getElementById("menuBtn");
+const sidebar = document.getElementById("sidebar");
+
+if(menuBtn){
+  menuBtn.onclick = () => {
+    sidebar.classList.toggle("active");
+  }
+}
+// Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', init);
