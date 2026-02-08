@@ -105,12 +105,12 @@
             <div class="form-container">
                 <div class="form-group">
                     <label><i class="fas fa-link"></i> LINK NGL</label>
-                    <input id="link" placeholder="isi link nya di sini yach.....">
+                    <input id="link" placeholder="https://ngl.link/username" class="placeholder-abu">
                 </div>
 
                 <div class="form-group">
                     <label><i class="fas fa-comment-alt"></i> PESAN</label>
-                    <textarea id="pesan" placeholder="isi pesan yang ingin di kirim kan cuy">isi pesan yang ingin di kirim kan cuy</textarea>
+                    <textarea id="pesan" placeholder="masukkan pesan yang akan dikirimkan" class="placeholder-abu"></textarea>
                 </div>
 
                 <div class="info-box">
@@ -142,25 +142,24 @@
 
     <!-- CONFIRMATION MODAL -->
     <div id="confirmation-modal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content confirm-modal">
             <div class="modal-header">
                 <h3><i class="fas fa-paper-plane"></i> Konfirmasi Pengiriman</h3>
-                <button onclick="closeConfirmationModal()" class="modal-close">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="confirmation-content">
                     <div class="confirmation-icon">
-                        <i class="fas fa-paper-plane"></i>
+                        <i class="fas fa-paper-plane fa-bounce"></i>
                     </div>
                     <p class="confirmation-title">Anda akan mengirim <span class="highlight">25 pesan</span> ke:</p>
                     <div class="confirmation-detail">
                         <div class="detail-item">
                             <i class="fas fa-link"></i>
-                            <span id="confirm-link"></span>
+                            <span id="confirm-link" class="link-text"></span>
                         </div>
                         <div class="detail-item">
                             <i class="fas fa-comment"></i>
-                            <span id="confirm-pesan"></span>
+                            <span id="confirm-pesan" class="pesan-text"></span>
                         </div>
                     </div>
                     <p class="confirmation-warning">
@@ -170,23 +169,26 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button onclick="closeConfirmationModal()" class="btn-secondary">Batal</button>
-                <button onclick="confirmSending()" class="btn-primary">Ya, Kirim Sekarang</button>
+                <button onclick="cancelSending()" class="btn-cancel">
+                    <i class="fas fa-times"></i> Batal
+                </button>
+                <button onclick="confirmSending()" class="btn-confirm">
+                    <i class="fas fa-check"></i> Oke
+                </button>
             </div>
         </div>
     </div>
 
     <!-- SUCCESS MODAL -->
     <div id="success-modal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content success-modal">
             <div class="modal-header success">
                 <h3><i class="fas fa-check-circle"></i> Pengiriman Selesai!</h3>
-                <button onclick="closeSuccessModal()" class="modal-close">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="result-summary">
                     <div class="result-icon">
-                        <i class="fas fa-check-circle"></i>
+                        <i class="fas fa-check-circle fa-bounce"></i>
                     </div>
                     <h4>Hasil Pengiriman</h4>
                     <div class="result-stats">
@@ -207,8 +209,12 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button onclick="closeSuccessModal()" class="btn-secondary">Tutup</button>
-                <button onclick="openStatus()" class="btn-primary">Lihat Detail</button>
+                <button onclick="closeSuccessModal()" class="btn-secondary">
+                    <i class="fas fa-times"></i> Tutup
+                </button>
+                <button onclick="openStatus()" class="btn-primary">
+                    <i class="fas fa-history"></i> Lihat Detail
+                </button>
             </div>
         </div>
     </div>
