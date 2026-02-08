@@ -32,6 +32,7 @@ const totalAttempts = 25;
 let logs = [];
 let currentLink = '';
 let currentPesan = '';
+let abortController = null;
 
 // Sidebar Functions
 menuBtn.onclick = openSidebar;
@@ -83,17 +84,23 @@ function showConfirmationModal() {
     currentPesan = pesanInput.value.trim();
 
     if (!currentLink || !currentPesan) {
-        return showAlert("error", "Link NGL dan pesan harus diisi yach!");
+        return showAlert("error", "Link NGL dan pesan harus diisi!");
     }
 
     // Validasi format link NGL
     if (!currentLink.includes('ngl.link/')) {
-        return showAlert("error", "Format link NGL tidak valid cuy!\nContoh: https://ngl.link/username");
+        return showAlert("error", "Format link NGL tidak valid!\nContoh: https://ngl.link/username");
     }
 
-    // Potong teks jika terlalu panjang
-    const displayLink = currentLink.length > 40 ? currentLink.substring(0, 40) + '...' : currentLink;
-    const displayPesan = currentPesan.length > 100 ? currentPesan.substring(0, 100) + '...' : currentPesan;
+    // Pastikan link diawali dengan https://
+    if (!currentLink.startsWith('https://')) {
+        currentLink = 'https://' + currentLink;
+        linkInput.value = currentLink;
+    }
+
+    // Potong teks jika terlalu panjang untuk display
+    const displayLink = currentLink.length > 30 ? currentLink.substring(0, 30) + '...' : currentLink;
+    const displayPesan = currentPesan.length > 50 ? currentPesan.substring(0, 50) + '...' : currentPesan;
 
     confirmLink.textContent = displayLink;
     confirmPesan.textContent = displayPesan;
@@ -130,7 +137,7 @@ function showAlert(type, message) {
     }, 5000);
 }
 
-// Main Send Function - PARALLEL & CEPAT
+// Main Send Function - HANYA PAKAI API DELINE
 async function startSending() {
     if (isSending) return;
 
@@ -138,6 +145,7 @@ async function startSending() {
     isSending = true;
     sentCount = 0;
     failedCount = 0;
+    abortController = new AbortController();
     
     // Update UI
     kirimBtn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> MENGIRIM...";
@@ -147,7 +155,7 @@ async function startSending() {
     openStatus();
     
     // Reset status
-    updateStatus("⚡ Mengirim...", "Memulai pengiriman 25 pesan secara paralel...", "fa-bolt fa-spin");
+    updateStatus("⚡ Mengirim...", "Memulai pengiriman 25 pesan...", "fa-bolt fa-spin");
     updateProgress(0);
     logs = [];
     updateLogDisplay();
@@ -156,91 +164,100 @@ async function startSending() {
     addLog(`🎯 Target: ${currentLink}`, "info");
     addLog(`💬 Pesan: "${currentPesan}"`, "info");
 
-    // Array untuk menyimpan semua promise
-    const promises = [];
-    
-    // Kirim 25 pesan secara paralel dengan batch
-    const batchSize = 5; // Kirim 5 pesan sekaligus
-    const totalBatches = Math.ceil(totalAttempts / batchSize);
-
-    for (let batch = 0; batch < totalBatches; batch++) {
-        if (!isSending) break; // Stop jika dibatalkan
-        
-        const startIdx = batch * batchSize;
-        const endIdx = Math.min(startIdx + batchSize, totalAttempts);
-        
-        // Kirim batch saat ini secara paralel
-        const batchPromises = [];
-        
-        for (let i = startIdx; i < endIdx; i++) {
-            batchPromises.push(sendSingleMessage(i));
-        }
-        
-        // Tunggu batch selesai
-        await Promise.allSettled(batchPromises);
-        
-        // Update progress setelah batch selesai
-        const done = sentCount + failedCount;
-        const progress = Math.round(done / totalAttempts * 100);
-        updateProgress(progress);
-        
-        // Update status
-        updateStatus(
-            "⚡ Mengirim...", 
-            `📊 Progress: ${done}/${totalAttempts} | ✅ ${sentCount} | ❌ ${failedCount}`,
-            "fa-paper-plane fa-bounce"
-        );
-
-        // Delay kecil antara batch (100ms)
-        if (batch < totalBatches - 1) {
-            await delay(100);
-        }
-    }
-
-    // Selesai
-    isSending = false;
-    kirimBtn.innerHTML = "<i class='fas fa-paper-plane'></i> KIRIM PESAN";
-    kirimBtn.disabled = false;
-    
-    // Update final status
-    updateStatus(
-        "✅ Selesai!", 
-        `Pengiriman selesai! Sukses: ${sentCount}, Gagal: ${failedCount}`,
-        "fa-check-circle"
-    );
-    
-    // Tampilkan modal hasil
-    showSuccessModal();
-}
-
-// Fungsi untuk kirim single message
-async function sendSingleMessage(index) {
     try {
-        // Kirim menggunakan API Deline langsung
-        const apiUrl = `https://api.deline.web.id/tools/spamngl?url=${encodeURIComponent(currentLink)}&message=${encodeURIComponent(currentPesan)}`;
-        
-        const response = await fetch(apiUrl, {
-            headers: {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                "Accept": "application/json"
-            },
-            // Timeout 10 detik
-            signal: AbortSignal.timeout(10000)
-        });
+        // Kirim pesan satu per satu
+        for (let i = 0; i < totalAttempts; i++) {
+            if (!isSending) break; // Stop jika dibatalkan
+            
+            try {
+                await sendSingleMessage(i);
+            } catch (error) {
+                failedCount++;
+                addLog(`Pesan ${i + 1}: ❌ Gagal`, "error");
+            }
+            
+            // Update progress
+            const done = sentCount + failedCount;
+            const progress = Math.round(done / totalAttempts * 100);
+            updateProgress(progress);
+            
+            // Update status
+            updateStatus(
+                "📤 Mengirim...", 
+                `Progress: ${done}/${totalAttempts} | ✅ ${sentCount} | ❌ ${failedCount}`,
+                "fa-paper-plane fa-bounce"
+            );
 
-        if (response.ok) {
-            sentCount++;
-            addLog(`Pesan ${index + 1}: ✅ Sukses`, "success");
-        } else {
-            failedCount++;
-            addLog(`Pesan ${index + 1}: ❌ Gagal (${response.status})`, "error");
+            // Delay kecil antara pesan (200-400ms)
+            if (i < totalAttempts - 1) {
+                await delay(200 + Math.random() * 200);
+            }
         }
     } catch (error) {
-        failedCount++;
-        if (error.name === 'AbortError') {
-            addLog(`Pesan ${index + 1}: ⏰ Timeout`, "error");
+        addLog(`⚠️ Proses dihentikan: ${error.message}`, "error");
+    } finally {
+        // Selesai
+        isSending = false;
+        kirimBtn.innerHTML = "<i class='fas fa-paper-plane'></i> KIRIM PESAN";
+        kirimBtn.disabled = false;
+        
+        // Update final status
+        updateStatus(
+            "✅ Selesai!", 
+            `Pengiriman selesai! Sukses: ${sentCount}, Gagal: ${failedCount}`,
+            "fa-check-circle"
+        );
+        
+        // Tampilkan modal hasil
+        setTimeout(() => {
+            showSuccessModal();
+        }, 500);
+    }
+}
+
+// Fungsi untuk kirim single message dengan API Deline
+async function sendSingleMessage(index) {
+    try {
+        const apiUrl = `https://api.deline.web.id/tools/spamngl?url=${encodeURIComponent(currentLink)}&message=${encodeURIComponent(currentPesan)}`;
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // Timeout 10 detik
+
+        const response = await fetch(apiUrl, {
+            method: 'GET',
+            headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Accept": "application/json",
+                "Origin": "https://deline.web.id",
+                "Referer": "https://deline.web.id/"
+            },
+            signal: controller.signal,
+            mode: 'cors',
+            credentials: 'omit'
+        });
+
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+            const data = await response.json();
+            
+            // Check response dari API Deline
+            if (data.status === true) {
+                sentCount++;
+                addLog(`Pesan ${index + 1}: ✅ Sukses`, "success");
+                return { success: true };
+            } else {
+                throw new Error('API response not success');
+            }
         } else {
-            addLog(`Pesan ${index + 1}: ⚠️ Error`, "error");
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            throw new Error('timeout');
+        } else {
+            throw error;
         }
     }
 }
@@ -290,8 +307,8 @@ function updateLogDisplay() {
         return;
     }
     
-    // Batasi log maksimal 50 item
-    const displayLogs = logs.slice(0, 50);
+    // Batasi log maksimal 30 item
+    const displayLogs = logs.slice(0, 30);
     
     logContent.innerHTML = displayLogs.map(log => `
         <div class="log-item ${log.type}">
@@ -317,6 +334,9 @@ function resetForm() {
     if (isSending) {
         if (confirm("Pengiriman sedang berjalan. Batalkan pengiriman dan reset form?")) {
             isSending = false;
+            if (abortController) {
+                abortController.abort();
+            }
             kirimBtn.innerHTML = "<i class='fas fa-paper-plane'></i> KIRIM PESAN";
             kirimBtn.disabled = false;
             addLog("⏹️ Pengiriman dibatalkan", "info");
@@ -342,12 +362,10 @@ function showSuccessModal() {
     // Set pesan hasil
     if (sentCount === totalAttempts) {
         resultMessage.textContent = "🎉 Semua pesan berhasil dikirim!";
-    } else if (sentCount > failedCount) {
-        resultMessage.textContent = "👍 Mayoritas pesan berhasil dikirim!";
-    } else if (sentCount === 0) {
-        resultMessage.textContent = "😞 Tidak ada pesan yang berhasil dikirim.";
+    } else if (sentCount > 0) {
+        resultMessage.textContent = `👍 ${sentCount} pesan berhasil dikirim`;
     } else {
-        resultMessage.textContent = "⚠️ Beberapa pesan gagal dikirim.";
+        resultMessage.textContent = "😞 Tidak ada pesan yang berhasil dikirim.";
     }
     
     successModal.classList.add("active");
@@ -368,16 +386,16 @@ style.textContent = `
         top: 20px;
         right: 20px;
         background: white;
-        padding: 15px 20px;
-        border-radius: 10px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        padding: 12px 16px;
+        border-radius: 8px;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
         z-index: 9999;
         animation: slideInRight 0.3s ease;
-        max-width: 350px;
-        border-left: 4px solid #667eea;
+        max-width: 300px;
+        border-left: 3px solid #667eea;
     }
     
     .custom-alert.error {
@@ -385,7 +403,7 @@ style.textContent = `
     }
     
     .custom-alert i {
-        font-size: 20px;
+        font-size: 18px;
         color: #667eea;
     }
     
@@ -395,19 +413,19 @@ style.textContent = `
     
     .custom-alert span {
         flex: 1;
-        font-size: 14px;
+        font-size: 13px;
         color: #333;
     }
     
     .custom-alert button {
         background: none;
         border: none;
-        font-size: 20px;
+        font-size: 18px;
         color: #999;
         cursor: pointer;
         padding: 0;
-        width: 24px;
-        height: 24px;
+        width: 22px;
+        height: 22px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -438,10 +456,8 @@ window.onload = function() {
     linkInput.placeholder = "https://ngl.link/username";
     pesanInput.placeholder = "masukkan pesan yang akan dikirimkan";
     
-    // Clear form jika ada value default
-    if (!linkInput.value) linkInput.value = "";
-    if (!pesanInput.value) pesanInput.value = "";
-    
     // Focus ke input link
-    linkInput.focus();
+    setTimeout(() => {
+        linkInput.focus();
+    }, 100);
 };
