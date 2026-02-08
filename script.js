@@ -138,3 +138,27 @@ function showSuccessModal() {
 function closeSuccessModal() {
     successModal.classList.remove("active");
 }
+const menuBtn = document.getElementById("menuBtn");
+const sidebar = document.getElementById("sidebar");
+const overlay = document.getElementById("overlay");
+const statusPage = document.getElementById("statusPage");
+
+menuBtn.onclick = () => {
+    sidebar.classList.add("active");
+    overlay.classList.add("active");
+};
+
+overlay.onclick = () => {
+    sidebar.classList.remove("active");
+    overlay.classList.remove("active");
+};
+
+function openStatus() {
+    statusPage.classList.add("active");
+    sidebar.classList.remove("active");
+    overlay.classList.remove("active");
+}
+
+function closeStatus() {
+    statusPage.classList.remove("active");
+}
