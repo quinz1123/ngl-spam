@@ -773,8 +773,14 @@ footer i {
 }
 
 /* SUCCESS MODAL KECIL */
+.success-modal {
+    background: white;
+    border-radius: 15px;
+}
+
 .success-modal .modal-body {
     padding: 25px;
+    background: white;
 }
 
 .result-summary-small {
