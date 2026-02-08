@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NGL Spam</title>
+    <title>NGL Spam Tool</title>
     
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -23,19 +23,19 @@
         </div>
         
         <div class="sidebar-content">
-            <button onclick="openStatusPage()">
+            <button class="sidebar-btn" data-page="statusPage">
                 <i class="fas fa-history"></i> Status Pengiriman
             </button>
 
-            <button onclick="openStatistikPage()">
+            <button class="sidebar-btn" data-page="statPage">
                 <i class="fas fa-chart-bar"></i> Statistik
             </button>
 
-            <button onclick="window.open('https://wa.me/6285156330324', '_blank')">
+            <button onclick="window.open('https://wa.me/6285156330324', '_blank')" class="sidebar-btn">
                 <i class="fab fa-whatsapp"></i> WhatsApp
             </button>
 
-            <button onclick="showInfo()">
+            <button onclick="showInfo()" class="sidebar-btn">
                 <i class="fas fa-info-circle"></i> Info
             </button>
         </div>
@@ -44,7 +44,7 @@
     <!-- STATUS PAGE -->
     <div id="statusPage" class="statusPage">
         <div class="status-header">
-            <button onclick="closeStatusPage()" class="backBtn">
+            <button onclick="closeAllPages()" class="backBtn">
                 <i class="fas fa-arrow-left"></i> Kembali
             </button>
             <h2><i class="fas fa-history"></i> Status Pengiriman</h2>
@@ -90,7 +90,7 @@
     <!-- STATISTIK PAGE -->
     <div id="statPage" class="statusPage">
         <div class="status-header">
-            <button onclick="closeStatistikPage()" class="backBtn">
+            <button onclick="closeAllPages()" class="backBtn">
                 <i class="fas fa-arrow-left"></i> Kembali
             </button>
             <h2><i class="fas fa-chart-bar"></i> Statistik</h2>
@@ -100,7 +100,7 @@
             <div class="result-container" style="text-align:center">
                 <h3>TOTAL PENGGUNA</h3>
 
-                <div id="visitCount" style="font-size:60px;font-weight:700;margin:20px 0">
+                <div id="visitCount" class="visit-count-animation">
                     0
                 </div>
 
@@ -110,22 +110,28 @@
     </div>
 
     <!-- MAIN PAGE -->
-    <div class="container">
+    <div class="container" id="mainPage">
         <!-- TOP BAR -->
         <div class="topbar">
             <button id="menuBtn" class="menu-btn">
                 <i class="fas fa-bars"></i>
             </button>
-            <h1 class="page-title">NGL Spam</h1>
+            <div class="logo-container">
+                <div class="logo-pulse"></div>
+                <h1 class="page-title">NGL Spam Tool</h1>
+            </div>
         </div>
 
         <!-- HEADER BANNER -->
         <div class="header-banner">
-            <img src="https://files.catbox.moe/qvt062.jpg" alt="NGL Spam Banner" class="topBanner">
+            <div class="banner-content">
+                <h2 class="banner-title animate-fade-in">NGL SPAM</h2>
+                <p class="banner-subtitle animate-slide-up">BY DAN Z TSUYOI</p>
+            </div>
         </div>
 
         <!-- MAIN CONTENT -->
-        <div class="card">
+        <div class="card animate-fade-in-up">
             <div class="card-header">
                 <h2><i class="fas fa-cogs"></i> Konfigurasi Pesan</h2>
                 <p class="card-subtitle">Isi form di bawah ini untuk mengirim pesan</p>
@@ -142,7 +148,7 @@
                     <textarea id="pesan" placeholder="masukkan pesan yang akan dikirimkan" class="placeholder-abu"></textarea>
                 </div>
 
-                <div class="info-box">
+                <div class="info-box animate-pulse">
                     <i class="fas fa-info-circle"></i>
                     <p><strong>Info:</strong> Pesan akan dikirim sebanyak 25 kali secara otomatis</p>
                 </div>
@@ -151,20 +157,20 @@
                     <button id="lihat-status" class="btn-secondary" onclick="openStatusPage()">
                         <i class="fas fa-history"></i> Lihat Status
                     </button>
-                    <button id="kirim" class="btn-primary">
+                    <button id="kirim" class="btn-primary btn-animate">
                         <i class="fas fa-paper-plane"></i> KIRIM PESAN
                     </button>
                 </div>
                 
                 <div class="button-group">
-                    <button id="reset" class="btn-secondary">
+                    <button id="reset" class="btn-secondary btn-animate">
                         <i class="fas fa-redo"></i> RESET
                     </button>
                 </div>
             </div>
         </div>
 
-        <footer>
+        <footer class="animate-fade-in-up">
             <p><i class="fas fa-code"></i> Created by Agas</p>
         </footer>
     </div>
@@ -174,7 +180,7 @@
         <div class="modal-content confirm-modal modal-small">
             <div class="modal-body">
                 <div class="confirmation-content">
-                    <div class="confirmation-icon-small">
+                    <div class="confirmation-icon-small animate-pulse">
                         <i class="fas fa-paper-plane"></i>
                     </div>
                     <h4 class="confirmation-title-small">Kirim 25 Pesan?</h4>
@@ -197,10 +203,10 @@
                 </div>
             </div>
             <div class="modal-footer-small">
-                <button onclick="cancelSending()" class="btn-cancel-small">
+                <button onclick="cancelSending()" class="btn-cancel-small btn-animate">
                     <i class="fas fa-times"></i> Batal
                 </button>
-                <button onclick="confirmSending()" class="btn-confirm-small">
+                <button onclick="confirmSending()" class="btn-confirm-small btn-animate">
                     <i class="fas fa-check"></i> Oke
                 </button>
             </div>
@@ -212,7 +218,7 @@
         <div class="modal-content success-modal modal-small">
             <div class="modal-body">
                 <div class="result-summary-small">
-                    <div class="result-icon-small">
+                    <div class="result-icon-small animate-success">
                         <i class="fas fa-check-circle"></i>
                     </div>
                     <h4 class="result-title-small">Pengiriman Selesai!</h4>
@@ -238,7 +244,7 @@
                 </div>
             </div>
             <div class="modal-footer-small">
-                <button onclick="closeSuccessModal()" class="btn-close-small">
+                <button onclick="closeSuccessModal()" class="btn-close-small btn-animate">
                     <i class="fas fa-times"></i> Tutup
                 </button>
             </div>
