@@ -1,3 +1,20 @@
+
+// FIREBASE INIT
+const firebaseConfig = {
+  apiKey: "AIzaSyD6YeP5f1AQD-abEjT5puQqT7HhysptLQs",
+  authDomain: "ngl-project-9eb40.firebaseapp.com",
+  projectId: "ngl-project-9eb40",
+  storageBucket: "ngl-project-9eb40.firebasestorage.app",
+  messagingSenderId: "744594564980",
+  appId: "1:744594564980:web:26137932ef850ed0c3ee21"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
 // DOM Elements
 const linkInput = document.getElementById('link');
 const pesanInput = document.getElementById('pesan');
@@ -195,3 +212,26 @@ function renderHistory() {
         addLog(`📌 ${h.waktu} | ✅ ${h.sukses} | ❌ ${h.gagal}`);
     });
 }
+const VISIT_KEY = "ngl_firebase_visit";
+const visitRef = () => db.collection("stats").doc("visits");
+
+async function firebaseCounter() {
+
+    const ref = visitRef();
+
+    if (!localStorage.getItem(VISIT_KEY)) {
+        await ref.set({
+            total: firebase.firestore.FieldValue.increment(1)
+        }, { merge: true });
+
+        localStorage.setItem(VISIT_KEY, "true");
+    }
+
+    ref.onSnapshot(doc => {
+        if (doc.exists) {
+            console.log("TOTAL VISITOR:", doc.data().total);
+        }
+    });
+}
+
+window.addEventListener("load", firebaseCounter);
