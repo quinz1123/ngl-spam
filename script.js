@@ -1,3 +1,4 @@
+
 // FIREBASE INIT
 const firebaseConfig = {
   apiKey: "AIzaSyD6YeP5f1AQD-abEjT5puQqT7HhysptLQs",
@@ -55,8 +56,19 @@ function initApp() {
     kirimBtn.onclick = showConfirmationModal;
     resetBtn.onclick = resetForm;
     clearLogBtn.onclick = clearLogs;
-    menuBtn.onclick = openSidebar;
-    overlay.onclick = closeSidebar;
+    
+    // Fix untuk menghapus efek biru saat tap di mobile
+    menuBtn.addEventListener('click', openSidebar);
+    menuBtn.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        openSidebar();
+    }, { passive: false });
+    
+    overlay.addEventListener('click', closeSidebar);
+    overlay.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        closeSidebar();
+    }, { passive: false });
     
     // Setup lihat status button
     if (lihatStatusBtn) {
@@ -76,25 +88,47 @@ function initApp() {
         updateStatus("📋 Riwayat Tersedia", "Ada riwayat pengiriman sebelumnya", "fa-history");
     }
     
-    // Setup sidebar button hover effects
-    setupSidebarHover();
+    // Setup sidebar untuk mencegah scroll body saat sidebar terbuka
+    setupSidebarScroll();
+    
+    // Setup semua tombol untuk mencegah efek biru
+    setupButtonTapEffects();
 }
 
-// Setup sidebar hover effects
-function setupSidebarHover() {
-    const sidebarButtons = document.querySelectorAll('.sidebar-content button');
-    sidebarButtons.forEach(button => {
-        button.addEventListener('mouseenter', function() {
-            this.style.backgroundColor = '#f8fafc';
-            this.style.color = '#667eea';
-            this.style.borderLeft = '4px solid #667eea';
-        });
+// Setup tombol untuk mencegah efek biru
+function setupButtonTapEffects() {
+    const allButtons = document.querySelectorAll('button');
+    allButtons.forEach(button => {
+        button.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+        }, { passive: false });
         
-        button.addEventListener('mouseleave', function() {
-            this.style.backgroundColor = '';
-            this.style.color = '';
-            this.style.borderLeft = '';
-        });
+        button.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            this.click();
+        }, { passive: false });
+    });
+}
+
+// Setup sidebar scroll
+function setupSidebarScroll() {
+    const originalStyle = document.body.style.cssText;
+    
+    menuBtn.addEventListener('click', function() {
+        if (sidebar.classList.contains('active')) {
+            // Enable body scroll
+            document.body.style.cssText = originalStyle;
+        } else {
+            // Disable body scroll
+            document.body.style.overflow = 'hidden';
+            document.body.style.position = 'fixed';
+            document.body.style.width = '100%';
+        }
+    });
+    
+    overlay.addEventListener('click', function() {
+        // Re-enable body scroll
+        document.body.style.cssText = originalStyle;
     });
 }
 
@@ -102,11 +136,21 @@ function setupSidebarHover() {
 function openSidebar() {
     sidebar.classList.add("active");
     overlay.classList.add("active");
+    
+    // Disable body scroll
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
 }
 
 function closeSidebar() {
     sidebar.classList.remove("active");
     overlay.classList.remove("active");
+    
+    // Re-enable body scroll
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
 }
 
 // STATUS PAGE FUNCTIONS
@@ -132,7 +176,7 @@ function closeStatistikPage() {
 
 // INFO FUNCTION
 function showInfo() {
-    alert("NGL Spam Tool v2.0\n\nFitur:\n• Kirim 25 pesan ke NGL sekaligus\n• Riwayat pengiriman\n• Statistik pengguna realtime\n• Progress tracking\n• Log aktivitas detail\n\nPastikan link NGL valid!\n\nCreator: Agas");
+    alert("NGL Spam v2.0\n\nFitur:\n• Kirim 25 pesan ke NGL sekaligus\n• Riwayat pengiriman\n• Statistik pengguna realtime\n• Progress tracking\n• Log aktivitas detail\n\nPastikan link NGL valid!\n\nCreator: Agas");
     closeSidebar();
 }
 
@@ -342,8 +386,7 @@ function updateStatus(title, description, iconClass) {
 function addLog(message, type = "info") {
     const time = new Date().toLocaleTimeString('id-ID', {
         hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
+        minute: '2-digit'
     });
     
     // Remove empty state if present
@@ -356,19 +399,22 @@ function addLog(message, type = "info") {
     const logItem = document.createElement('div');
     logItem.className = `log-item log-${type}`;
     
-    // Format waktu lebih baik
-    const timeFormatted = `<small>${time}</small>`;
+    // Clean message
+    const cleanMessage = message
+        .replace(/✔/g, '✅')
+        .replace(/❌/g, '❌')
+        .replace(/\|\s*$/g, '');
     
     logItem.innerHTML = `
-        <div class="log-message">${message}</div>
-        <div class="log-time">${timeFormatted}</div>
+        <div class="log-message">${cleanMessage}</div>
+        <div class="log-time">${time}</div>
     `;
     
     // Add to top of log
     logContent.insertBefore(logItem, logContent.firstChild);
     
     // Store in memory (limit to 50 items)
-    logs.unshift({ message, time, type });
+    logs.unshift({ message: cleanMessage, time, type });
     if (logs.length > 50) logs.pop();
     
     // Auto scroll to top
@@ -376,6 +422,8 @@ function addLog(message, type = "info") {
 }
 
 function clearLogs() {
+    if (!confirm("Hapus semua log aktivitas?")) return;
+    
     logs = [];
     logContent.innerHTML = `
         <div class="log-empty">
@@ -472,7 +520,7 @@ function renderHistory() {
     const history = loadHistory();
     
     // Clear current logs
-    clearLogs();
+    logContent.innerHTML = '';
     
     if (history.length === 0) {
         addLog("📋 Belum ada riwayat pengiriman", "info");
@@ -484,9 +532,16 @@ function renderHistory() {
     
     // Show latest 5 entries with better formatting
     history.slice(0, 5).forEach((entry, index) => {
-        const status = entry.sukses > entry.gagal ? "✅" : "⚠️";
-        const pesanShort = entry.pesan.length > 30 ? entry.pesan.substring(0, 27) + "..." : entry.pesan;
-        addLog(`${status} ${entry.waktu} | ✅${entry.sukses} ❌${entry.gagal} | ${pesanShort}`, "info");
+        let pesanDisplay = entry.pesan;
+        if (pesanDisplay.length > 25) {
+            pesanDisplay = pesanDisplay.substring(0, 22) + "...";
+        }
+        
+        const waktuParts = entry.waktu.split(', ');
+        const tanggal = waktuParts[0];
+        const jam = waktuParts[1] || "";
+        
+        addLog(`${tanggal} | ${jam} | ✅${entry.sukses} ❌${entry.gagal} | ${pesanDisplay}`, "info");
     });
     
     if (history.length > 5) {
@@ -495,47 +550,59 @@ function renderHistory() {
 }
 
 // VISIT COUNTER - FIXED
-const VISIT_KEY = "ngl_visit_counted";
+const VISIT_KEY = "ngl_visit_today";
 const visitRef = firebase.firestore().collection("stats").doc("visits");
 
 async function initCounter() {
-    // Only count once per device (using localStorage, not sessionStorage)
-    if (!localStorage.getItem(VISIT_KEY)) {
+    // Get today's date in YYYY-MM-DD format
+    const today = new Date().toISOString().split('T')[0];
+    const todayKey = `${VISIT_KEY}_${today}`;
+    
+    // Only count once per day per device
+    if (!localStorage.getItem(todayKey)) {
         try {
-            // First, get current count
-            const doc = await visitRef.get();
-            let currentCount = 0;
+            // Use transaction to prevent race conditions
+            await db.runTransaction(async (transaction) => {
+                const doc = await transaction.get(visitRef);
+                
+                let currentCount = 0;
+                if (doc.exists) {
+                    currentCount = doc.data().total || 0;
+                }
+                
+                // Update the count
+                transaction.set(visitRef, {
+                    total: currentCount + 1,
+                    lastUpdate: new Date().toISOString(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+            });
             
-            if (doc.exists) {
-                currentCount = doc.data().total || 0;
-            }
+            // Mark as counted for today
+            localStorage.setItem(todayKey, "true");
+            console.log("Visitor counted for today");
             
-            // Increment by 1
-            await visitRef.set({
-                total: currentCount + 1,
-                lastUpdate: new Date().toISOString()
-            }, { merge: true });
-            
-            // Mark as counted
-            localStorage.setItem(VISIT_KEY, "true");
-            console.log("Visitor counted: ", currentCount + 1);
         } catch (error) {
             console.error("Error updating counter:", error);
         }
     }
 
     // Real-time listener for visitor count
-    visitRef.onSnapshot(doc => {
-        if (doc.exists) {
-            const count = doc.data().total || 0;
-            const visitCountElement = document.getElementById("visitCount");
-            if (visitCountElement) {
-                visitCountElement.innerText = count.toLocaleString('id-ID');
+    visitRef.onSnapshot(
+        (doc) => {
+            if (doc.exists) {
+                const count = doc.data().total || 0;
+                const visitCountElement = document.getElementById("visitCount");
+                if (visitCountElement) {
+                    visitCountElement.innerText = count.toLocaleString('id-ID');
+                }
             }
+        },
+        (error) => {
+            console.error("Error listening to counter:", error);
+            document.getElementById("visitCount").innerText = "0";
         }
-    }, error => {
-        console.error("Error listening to counter:", error);
-    });
+    );
 }
 
 // EXPORT FUNCTIONS FOR HTML ONCLICK
