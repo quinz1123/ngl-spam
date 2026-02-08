@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NGL Spam - Send Messages</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📨</text></svg>">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-paper-plane"></i>
+                <h1>NGL Spam</h1>
+            </div>
+            <p class="tagline">Kirim pesan ke NGL secara otomatis dengan cepat</p>
+        </header>
+
+        <main>
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-cogs"></i> Konfigurasi Pesan</h2>
+                    <p class="card-subtitle">Isi form di bawah ini untuk mengirim pesan</p>
+                </div>
+                
+                <div class="form-container">
+                    <div class="form-group">
+                        <label for="link"><i class="fas fa-link"></i> LINK NGL</label>
+                        <input type="url" id="link" placeholder="https://ngl.link/username" value="https://ngl.link/danztsuyou">
+                        <div class="input-note">Masukkan link profil NGL target</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="pesan"><i class="fas fa-comment-alt"></i> PESAN</label>
+                        <textarea id="pesan" placeholder="Masukkan pesan yang ingin dikirim..." rows="3">tes</textarea>
+                        <div class="input-note">Pesan yang akan dikirim ke NGL target</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="jumlah"><i class="fas fa-layer-group"></i> JUMLAH PESAN</label>
+                        <div class="range-container">
+                            <input type="range" id="jumlah-range" min="1" max="100" value="2">
+                            <div class="range-value">
+                                <input type="number" id="jumlah" min="1" max="1000" value="2">
+                                <span>pesan</span>
+                            </div>
+                        </div>
+                        <div class="input-note">Geser slider atau ketik jumlah pesan yang ingin dikirim (maks: 1000)</div>
+                    </div>
+                    
+                    <div class="button-group">
+                        <button id="kirim" class="btn-primary">
+                            <i class="fas fa-paper-plane"></i> KIRIM PESAN
+                        </button>
+                        <button id="reset" class="btn-secondary">
+                            <i class="fas fa-redo"></i> RESET FORM
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="info-box">
+                    <h3><i class="fas fa-info-circle"></i> Cara Menggunakan</h3>
+                    <ol>
+                        <li>Masukkan link profil NGL target</li>
+                        <li>Tulis pesan yang ingin dikirim</li>
+                        <li>Tentukan jumlah pesan yang akan dikirim</li>
+                        <li>Klik tombol "Kirim Pesan"</li>
+                        <li>Tunggu proses hingga selesai</li>
+                    </ol>
+                </div>
+            </div>
+            
+            <div class="card result-card">
+                <div class="card-header">
+                    <h2><i class="fas fa-history"></i> Status Pengiriman</h2>
+                    <p class="card-subtitle">Hasil pengiriman akan ditampilkan di sini</p>
+                </div>
+                
+                <div class="result-container">
+                    <div class="status-indicator">
+                        <div class="status-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="status-text">
+                            <h3>Menunggu</h3>
+                            <p>Belum ada pengiriman pesan</p>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progress-fill"></div>
+                        </div>
+                        <div class="progress-text" id="progress-text">0% (0/0)</div>
+                    </div>
+                    
+                    <div class="log-container">
+                        <div class="log-header">
+                            <h4>Log Aktivitas</h4>
+                            <button id="clear-log" class="btn-small">
+                                <i class="fas fa-trash"></i> Hapus Log
+                            </button>
+                        </div>
+                        <div class="log-content" id="log-content">
+                            <div class="log-empty">
+                                <i class="fas fa-clipboard-list"></i>
+                                <p>Log aktivitas akan muncul di sini</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <footer>
+            <p>Dibuat dengan <i class="fas fa-heart"></i> untuk kemudahan pengiriman pesan NGL</p>
+            <p class="footer-note">Gunakan dengan bijak. Jangan disalahgunakan untuk tujuan buruk.</p>
+        </footer>
+    </div>
+
+    <!-- Modal Loading -->
+    <div class="modal" id="loading-modal">
+        <div class="modal-content">
+            <div class="loader">
+                <div class="spinner"></div>
+                <h3>Mengirim Pesan...</h3>
+                <p id="loading-detail">Mempersiapkan pengiriman</p>
+                <div class="progress-container modal-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="modal-progress-fill"></div>
+                    </div>
+                    <div class="progress-text" id="modal-progress-text">0%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Success -->
+    <div class="modal" id="success-modal">
+        <div class="modal-content success">
+            <div class="modal-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h3>Pengiriman Berhasil!</h3>
+            <p id="success-message">Pesan telah berhasil dikirim</p>
+            <button id="close-success" class="btn-primary">
+                <i class="fas fa-times"></i> TUTUP
+            </button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
