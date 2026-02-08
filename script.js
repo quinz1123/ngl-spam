@@ -96,7 +96,19 @@ async function startSending() {
     kirimBtn.disabled = false;
     kirimBtn.innerHTML = "KIRIM PESAN";
 
-    setTimeout(showSuccessModal, 400);
+    const history = loadHistory();
+
+history.unshift({
+    link: currentLink,
+    pesan: currentPesan,
+    sukses: sentCount,
+    gagal: failedCount,
+    waktu: new Date().toLocaleString()
+});
+
+saveHistory(history.slice(0,10));
+
+setTimeout(showSuccessModal, 400);
 }
 
 // UI HELPERS
@@ -154,6 +166,7 @@ overlay.onclick = () => {
 };
 
 function openStatus() {
+    renderHistory();
     statusPage.classList.add("active");
     sidebar.classList.remove("active");
     overlay.classList.remove("active");
@@ -161,4 +174,24 @@ function openStatus() {
 
 function closeStatus() {
     statusPage.classList.remove("active");
+}
+function saveHistory(data) {
+    localStorage.setItem("ngl_history", JSON.stringify(data));
+}
+
+function loadHistory() {
+    const h = localStorage.getItem("ngl_history");
+    return h ? JSON.parse(h) : [];
+}
+function renderHistory() {
+    const history = loadHistory();
+
+    if (!history.length) {
+        addLog("Belum ada riwayat");
+        return;
+    }
+
+    history.forEach(h => {
+        addLog(`📌 ${h.waktu} | ✅ ${h.sukses} | ❌ ${h.gagal}`);
+    });
 }
