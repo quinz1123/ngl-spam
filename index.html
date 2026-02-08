@@ -140,80 +140,80 @@
         </footer>
     </div>
 
-    <!-- CONFIRMATION MODAL -->
+    <!-- CONFIRMATION MODAL (UKURAN KECIL) -->
     <div id="confirmation-modal" class="modal">
-        <div class="modal-content confirm-modal">
-            <div class="modal-header">
-                <h3><i class="fas fa-paper-plane"></i> Konfirmasi Pengiriman</h3>
-            </div>
+        <div class="modal-content confirm-modal modal-small">
             <div class="modal-body">
                 <div class="confirmation-content">
-                    <div class="confirmation-icon">
-                        <i class="fas fa-paper-plane fa-bounce"></i>
+                    <div class="confirmation-icon-small">
+                        <i class="fas fa-paper-plane"></i>
                     </div>
-                    <p class="confirmation-title">Anda akan mengirim <span class="highlight">25 pesan</span> ke:</p>
-                    <div class="confirmation-detail">
-                        <div class="detail-item">
+                    <h4 class="confirmation-title-small">Kirim 25 Pesan?</h4>
+                    
+                    <div class="confirmation-detail-small">
+                        <div class="detail-row">
                             <i class="fas fa-link"></i>
-                            <span id="confirm-link" class="link-text"></span>
+                            <span id="confirm-link" class="link-text-small"></span>
                         </div>
-                        <div class="detail-item">
+                        <div class="detail-row">
                             <i class="fas fa-comment"></i>
-                            <span id="confirm-pesan" class="pesan-text"></span>
+                            <span id="confirm-pesan" class="pesan-text-small"></span>
                         </div>
                     </div>
-                    <p class="confirmation-warning">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        Pastikan link dan pesan sudah benar
+                    
+                    <p class="confirmation-warning-small">
+                        <i class="fas fa-exclamation-circle"></i>
+                        Pastikan sudah benar
                     </p>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button onclick="cancelSending()" class="btn-cancel">
+            <div class="modal-footer-small">
+                <button onclick="cancelSending()" class="btn-cancel-small">
                     <i class="fas fa-times"></i> Batal
                 </button>
-                <button onclick="confirmSending()" class="btn-confirm">
+                <button onclick="confirmSending()" class="btn-confirm-small">
                     <i class="fas fa-check"></i> Oke
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- SUCCESS MODAL -->
+    <!-- SUCCESS MODAL (UKURAN KECIL) -->
     <div id="success-modal" class="modal">
-        <div class="modal-content success-modal">
-            <div class="modal-header success">
-                <h3><i class="fas fa-check-circle"></i> Pengiriman Selesai!</h3>
-            </div>
+        <div class="modal-content success-modal modal-small">
             <div class="modal-body">
-                <div class="result-summary">
-                    <div class="result-icon">
-                        <i class="fas fa-check-circle fa-bounce"></i>
+                <div class="result-summary-small">
+                    <div class="result-icon-small">
+                        <i class="fas fa-check-circle"></i>
                     </div>
-                    <h4>Hasil Pengiriman</h4>
-                    <div class="result-stats">
-                        <div class="stat-item success">
-                            <div class="stat-number" id="success-count">0</div>
-                            <div class="stat-label">Berhasil</div>
+                    <h4 class="result-title-small">Pengiriman Selesai!</h4>
+                    
+                    <div class="result-stats-small">
+                        <div class="stat-item-small">
+                            <div class="stat-number-small" id="success-count">0</div>
+                            <div class="stat-label-small">Berhasil</div>
                         </div>
-                        <div class="stat-item error">
-                            <div class="stat-number" id="fail-count">0</div>
-                            <div class="stat-label">Gagal</div>
+                        <div class="stat-divider"></div>
+                        <div class="stat-item-small">
+                            <div class="stat-number-small" id="fail-count">0</div>
+                            <div class="stat-label-small">Gagal</div>
                         </div>
-                        <div class="stat-item total">
-                            <div class="stat-number">25</div>
-                            <div class="stat-label">Total</div>
+                        <div class="stat-divider"></div>
+                        <div class="stat-item-small">
+                            <div class="stat-number-small">25</div>
+                            <div class="stat-label-small">Total</div>
                         </div>
                     </div>
-                    <div class="result-message" id="result-message"></div>
+                    
+                    <div class="result-message-small" id="result-message"></div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button onclick="closeSuccessModal()" class="btn-secondary">
+            <div class="modal-footer-small">
+                <button onclick="closeSuccessModal()" class="btn-close-small">
                     <i class="fas fa-times"></i> Tutup
                 </button>
-                <button onclick="openStatus()" class="btn-primary">
-                    <i class="fas fa-history"></i> Lihat Detail
+                <button onclick="openStatus()" class="btn-detail-small">
+                    <i class="fas fa-history"></i> Detail
                 </button>
             </div>
         </div>
@@ -221,4 +221,4 @@
 
     <script src="script.js"></script>
 </body>
-</html> 
+</html>
