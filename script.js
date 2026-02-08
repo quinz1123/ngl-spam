@@ -1,5 +1,4 @@
-
-// FIREBASE INIT
+// ================= FIREBASE INIT =================
 const firebaseConfig = {
   apiKey: "AIzaSyD6YeP5f1AQD-abEjT5puQqT7HhysptLQs",
   authDomain: "ngl-project-9eb40.firebaseapp.com",
@@ -12,226 +11,134 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+// ================= DOM =================
+const linkInput = document.getElementById("link");
+const pesanInput = document.getElementById("pesan");
+const kirimBtn = document.getElementById("kirim");
+const resetBtn = document.getElementById("reset");
+const progressFill = document.getElementById("progress-fill");
+const progressText = document.getElementById("progress-text");
+const logContent = document.getElementById("log-content");
+const confirmationModal = document.getElementById("confirmation-modal");
+const successModal = document.getElementById("success-modal");
+const confirmLink = document.getElementById("confirm-link");
+const confirmPesan = document.getElementById("confirm-pesan");
+const successCount = document.getElementById("success-count");
+const failCount = document.getElementById("fail-count");
+const resultMessage = document.getElementById("result-message");
+const statusTitle = document.getElementById("status-title");
+const statusDesc = document.getElementById("status-desc");
+const statusIcon = document.getElementById("status-icon");
+const visitCount = document.getElementById("visitCount");
 
-// DOM Elements
-const linkInput = document.getElementById('link');
-const pesanInput = document.getElementById('pesan');
-const kirimBtn = document.getElementById('kirim');
-const resetBtn = document.getElementById('reset');
-const lihatStatusBtn = document.getElementById('lihat-status');
-const progressFill = document.getElementById('progress-fill');
-const progressText = document.getElementById('progress-text');
-const logContent = document.getElementById('log-content');
-const clearLogBtn = document.getElementById('clear-log');
-const confirmationModal = document.getElementById('confirmation-modal');
-const successModal = document.getElementById('success-modal');
-const confirmLink = document.getElementById('confirm-link');
-const confirmPesan = document.getElementById('confirm-pesan');
-const successCount = document.getElementById('success-count');
-const failCount = document.getElementById('fail-count');
-const resultMessage = document.getElementById('result-message');
-const statusTitle = document.getElementById('status-title');
-const statusDesc = document.getElementById('status-desc');
-const statusIcon = document.getElementById('status-icon');
-
-let isSending = false;
-let sentCount = 0;
-let failedCount = 0;
-const totalAttempts = 25;
-let logs = [];
-let currentLink = '';
-let currentPesan = '';
-
-// EVENTS
-kirimBtn.onclick = showConfirmationModal;
-resetBtn.onclick = resetForm;
-lihatStatusBtn.onclick = () => statusPage.classList.add("active");
-clearLogBtn.onclick = clearLogs;
-
-// CONFIRM
-function showConfirmationModal() {
-    currentLink = linkInput.value.trim();
-    currentPesan = pesanInput.value.trim();
-
-    if (!currentLink || !currentPesan) return alert("Link & pesan wajib");
-
-    if (!currentLink.startsWith("https://")) currentLink = "https://" + currentLink;
-
-    confirmLink.textContent = currentLink;
-    confirmPesan.textContent = currentPesan;
-    confirmationModal.classList.add("active");
-}
-
-function confirmSending() {
-    confirmationModal.classList.remove("active");
-    startSending();
-}
-
-// MAIN SEND (SINGLE REQUEST)
-async function startSending() {
-    if (isSending) return;
-    isSending = true;
-
-    sentCount = 0;
-    failedCount = 0;
-    logs = [];
-
-    kirimBtn.disabled = true;
-    kirimBtn.innerHTML = "MENGIRIM...";
-
-    addLog("🚀 Mengirim pesan...");
-    updateStatus("📤 Mengirim", "Mohon tunggu...", "fa-spinner fa-spin");
-
-    try {
-        const apiUrl = `https://api.deline.web.id/tools/spamngl?url=${encodeURIComponent(currentLink)}&message=${encodeURIComponent(currentPesan)}`;
-
-        const controller = new AbortController();
-        setTimeout(() => controller.abort(), 30000);
-
-        const res = await fetch(apiUrl, { signal: controller.signal });
-        const data = await res.json();
-
-        if (!data.status) throw "API ERROR";
-
-        // PAKAI DATA ASLI API
-        sentCount = data.result.berhasil_dikirim;
-        failedCount = data.result.gagal_dikirim;
-
-        updateProgress(100);
-        addLog(`✅ Berhasil: ${sentCount}`);
-        addLog(`❌ Gagal: ${failedCount}`);
-
-        updateStatus("✅ Selesai", "Pengiriman selesai", "fa-check-circle");
-
-    } catch (e) {
-        failedCount = totalAttempts;
-        addLog("❌ Request gagal / timeout");
-    }
-
-    kirimBtn.disabled = false;
-    kirimBtn.innerHTML = "KIRIM PESAN";
-
-    const history = loadHistory();
-
-history.unshift({
-    link: currentLink,
-    pesan: currentPesan,
-    sukses: sentCount,
-    gagal: failedCount,
-    waktu: new Date().toLocaleString()
-});
-
-saveHistory(history.slice(0,10));
-
-setTimeout(showSuccessModal, 400);
-}
-
-// UI HELPERS
-function updateProgress(p) {
-    progressFill.style.width = p + "%";
-    progressText.textContent = `${p}%`;
-}
-
-function updateStatus(t, d, i) {
-    statusTitle.textContent = t;
-    statusDesc.textContent = d;
-    statusIcon.className = "fas " + i;
-}
-
-function addLog(msg) {
-    logs.unshift({ msg, time: new Date().toLocaleTimeString() });
-    logContent.innerHTML = logs.map(l =>
-        `<div class="log-item"><span>${l.msg}</span><small>${l.time}</small></div>`
-    ).join("");
-}
-
-function clearLogs() {
-    logs = [];
-    logContent.innerHTML = "";
-}
-
-function resetForm() {
-    linkInput.value = "";
-    pesanInput.value = "";
-}
-
-function showSuccessModal() {
-    successCount.textContent = sentCount;
-    failCount.textContent = failedCount;
-    resultMessage.textContent = "🔥 Done";
-    successModal.classList.add("active");
-}
-
-function closeSuccessModal() {
-    successModal.classList.remove("active");
-}
 const menuBtn = document.getElementById("menuBtn");
 const sidebar = document.getElementById("sidebar");
 const overlay = document.getElementById("overlay");
 const statusPage = document.getElementById("statusPage");
+const statPage = document.getElementById("statPage");
 
+// ================= SIDEBAR =================
 menuBtn.onclick = () => {
-    sidebar.classList.add("active");
-    overlay.classList.add("active");
+  sidebar.classList.add("active");
+  overlay.classList.add("active");
 };
 
 overlay.onclick = () => {
-    sidebar.classList.remove("active");
-    overlay.classList.remove("active");
+  sidebar.classList.remove("active");
+  overlay.classList.remove("active");
 };
 
 function openStatus() {
-    renderHistory();
-    statusPage.classList.add("active");
-    sidebar.classList.remove("active");
-    overlay.classList.remove("active");
+  statusPage.classList.add("active");
+  sidebar.classList.remove("active");
+  overlay.classList.remove("active");
 }
 
 function closeStatus() {
-    statusPage.classList.remove("active");
-}
-function saveHistory(data) {
-    localStorage.setItem("ngl_history", JSON.stringify(data));
+  statusPage.classList.remove("active");
 }
 
-function loadHistory() {
-    const h = localStorage.getItem("ngl_history");
-    return h ? JSON.parse(h) : [];
+function openStatistik() {
+  statPage.classList.add("active");
+  sidebar.classList.remove("active");
+  overlay.classList.remove("active");
 }
-function renderHistory() {
-    const history = loadHistory();
 
-    if (!history.length) {
-        addLog("Belum ada riwayat");
-        return;
-    }
-
-    history.forEach(h => {
-        addLog(`📌 ${h.waktu} | ✅ ${h.sukses} | ❌ ${h.gagal}`);
-    });
+function closeStatistik() {
+  statPage.classList.remove("active");
 }
+
+// ================= MODAL =================
+function showConfirmationModal() {
+  confirmLink.textContent = linkInput.value;
+  confirmPesan.textContent = pesanInput.value;
+  confirmationModal.classList.add("active");
+}
+
+function confirmSending() {
+  confirmationModal.classList.remove("active");
+  startSending();
+}
+
+function closeSuccessModal() {
+  successModal.classList.remove("active");
+}
+
+// ================= SEND =================
+async function startSending() {
+  kirimBtn.disabled = true;
+  kirimBtn.innerHTML = "MENGIRIM...";
+
+  updateStatus("📤 Mengirim", "Mohon tunggu...", "fa-spinner fa-spin");
+
+  try {
+    const api = `https://api.deline.web.id/tools/spamngl?url=${encodeURIComponent(linkInput.value)}&message=${encodeURIComponent(pesanInput.value)}`;
+    const res = await fetch(api);
+    const data = await res.json();
+
+    successCount.textContent = data.result.berhasil_dikirim;
+    failCount.textContent = data.result.gagal_dikirim;
+
+    updateProgress(100);
+    updateStatus("✅ Selesai", "Pengiriman selesai", "fa-check-circle");
+
+  } catch {
+    failCount.textContent = 25;
+  }
+
+  kirimBtn.disabled = false;
+  kirimBtn.innerHTML = "KIRIM PESAN";
+  successModal.classList.add("active");
+}
+
+// ================= UI =================
+function updateProgress(p) {
+  progressFill.style.width = p + "%";
+  progressText.textContent = p + "%";
+}
+
+function updateStatus(t, d, i) {
+  statusTitle.textContent = t;
+  statusDesc.textContent = d;
+  statusIcon.className = "fas " + i;
+}
+
+// ================= FIREBASE VISITOR =================
 const VISIT_KEY = "ngl_firebase_visit";
-const visitRef = () => db.collection("stats").doc("visits");
 
 async function firebaseCounter() {
+  const ref = db.collection("stats").doc("visits");
 
-    const ref = visitRef();
+  if (!localStorage.getItem(VISIT_KEY)) {
+    await ref.set({ total: firebase.firestore.FieldValue.increment(1) }, { merge: true });
+    localStorage.setItem(VISIT_KEY, "true");
+  }
 
-    if (!localStorage.getItem(VISIT_KEY)) {
-        await ref.set({
-            total: firebase.firestore.FieldValue.increment(1)
-        }, { merge: true });
-
-        localStorage.setItem(VISIT_KEY, "true");
+  ref.onSnapshot(doc => {
+    if (doc.exists) {
+      visitCount.textContent = doc.data().total || 0;
     }
-
-    ref.onSnapshot(doc => {
-        if (doc.exists) {
-            console.log("TOTAL VISITOR:", doc.data().total);
-        }
-    });
+  });
 }
 
-window.addEventListener("load", firebaseCounter);
+window.onload = firebaseCounter;
