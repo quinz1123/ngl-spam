@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -24,15 +23,15 @@
         </div>
         
         <div class="sidebar-content">
-            <button onclick="openStatus()">
+            <button onclick="openStatusPage()">
                 <i class="fas fa-history"></i> Status Pengiriman
             </button>
 
-            <button onclick="openStatistik()">
+            <button onclick="openStatistikPage()">
                 <i class="fas fa-chart-bar"></i> Statistik
             </button>
 
-            <button onclick="window.open('https://wa.me/6285156330324')">
+            <button onclick="window.open('https://wa.me/6285156330324', '_blank')">
                 <i class="fab fa-whatsapp"></i> WhatsApp
             </button>
 
@@ -45,7 +44,7 @@
     <!-- STATUS PAGE -->
     <div id="statusPage" class="statusPage">
         <div class="status-header">
-            <button onclick="closeStatus()" class="backBtn">
+            <button onclick="closeStatusPage()" class="backBtn">
                 <i class="fas fa-arrow-left"></i> Kembali
             </button>
             <h2><i class="fas fa-history"></i> Status Pengiriman</h2>
@@ -91,7 +90,7 @@
     <!-- STATISTIK PAGE -->
     <div id="statPage" class="statusPage">
         <div class="status-header">
-            <button onclick="closeStatistik()" class="backBtn">
+            <button onclick="closeStatistikPage()" class="backBtn">
                 <i class="fas fa-arrow-left"></i> Kembali
             </button>
             <h2><i class="fas fa-chart-bar"></i> Statistik</h2>
@@ -149,7 +148,7 @@
                 </div>
 
                 <div class="button-group">
-                    <button id="lihat-status" class="btn-secondary" onclick="openStatus()">
+                    <button id="lihat-status" class="btn-secondary" onclick="openStatusPage()">
                         <i class="fas fa-history"></i> Lihat Status
                     </button>
                     <button id="kirim" class="btn-primary">
@@ -166,7 +165,7 @@
         </div>
 
         <footer>
-            <p><i class="fas fa-code"></i> NGL Spam Tool v2.0</p>
+            <p><i class="fas fa-code"></i> NGL Spam Tool v2.0 • Created with ❤️ by Agas</p>
         </footer>
     </div>
 
