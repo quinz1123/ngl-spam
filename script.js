@@ -8,10 +8,13 @@ const progressFill = document.getElementById('progress-fill');
 const progressText = document.getElementById('progress-text');
 const logContent = document.getElementById('log-content');
 const clearLogBtn = document.getElementById('clear-log');
+const confirmationModal = document.getElementById('confirmation-modal');
 const successModal = document.getElementById('success-modal');
-const closeSuccessBtn = document.getElementById('close-success');
+const confirmLink = document.getElementById('confirm-link');
+const confirmPesan = document.getElementById('confirm-pesan');
 const successCount = document.getElementById('success-count');
 const failCount = document.getElementById('fail-count');
+const resultMessage = document.getElementById('result-message');
 const statusTitle = document.getElementById('status-title');
 const statusDesc = document.getElementById('status-desc');
 const statusIcon = document.getElementById('status-icon');
@@ -27,6 +30,8 @@ let sentCount = 0;
 let failedCount = 0;
 const totalAttempts = 25; // Fix 25 pesan
 let logs = [];
+let currentLink = '';
+let currentPesan = '';
 
 // Sidebar Functions
 menuBtn.onclick = openSidebar;
@@ -51,40 +56,63 @@ function closeStatus() {
     statusPage.classList.remove("active");
 }
 
+function showInfo() {
+    alert('✨ NGL Spam Tool ✨\n\nKirim pesan ke NGL secara otomatis\nMenggunakan API dari deline.web.id\n\n• Otomatis kirim 25 pesan\n• Tampilkan status real-time\n• Log aktivitas lengkap\n\nBy Agas');
+    closeSidebar();
+}
+
 // Event Listeners
-kirimBtn.onclick = startSending;
+kirimBtn.onclick = showConfirmationModal;
 resetBtn.onclick = resetForm;
 lihatStatusBtn.onclick = openStatus;
 clearLogBtn.onclick = clearLogs;
-closeSuccessBtn.onclick = closeSuccessModal;
 
 // Close modal when clicking outside
 window.onclick = function(event) {
+    if (event.target === confirmationModal) {
+        closeConfirmationModal();
+    }
     if (event.target === successModal) {
         closeSuccessModal();
     }
 }
 
-// Main Send Function
-async function startSending() {
-    if (isSending) return;
+// Confirmation Modal
+function showConfirmationModal() {
+    currentLink = linkInput.value.trim();
+    currentPesan = pesanInput.value.trim();
 
-    const link = linkInput.value.trim();
-    const pesan = pesanInput.value.trim();
-
-    if (!link || !pesan) {
-        return alert("Link NGL dan pesan harus diisi!");
+    if (!currentLink || !currentPesan) {
+        return alert("Link NGL dan pesan harus diisi yach!");
     }
 
     // Validasi format link NGL
-    if (!link.includes('ngl.link/')) {
-        return alert("Format link NGL tidak valid!\nContoh: https://ngl.link/username");
+    if (!currentLink.includes('ngl.link/')) {
+        return alert("Format link NGL tidak valid cuy!\nContoh: https://ngl.link/username");
     }
 
-    // Konfirmasi sebelum mengirim
-    if (!confirm(`Anda akan mengirim 25 pesan ke:\n${link}\n\nPesan: "${pesan}"\n\nLanjutkan?`)) {
-        return;
-    }
+    // Potong teks jika terlalu panjang
+    const displayLink = currentLink.length > 40 ? currentLink.substring(0, 40) + '...' : currentLink;
+    const displayPesan = currentPesan.length > 100 ? currentPesan.substring(0, 100) + '...' : currentPesan;
+
+    confirmLink.textContent = displayLink;
+    confirmPesan.textContent = displayPesan;
+    
+    confirmationModal.classList.add("active");
+}
+
+function closeConfirmationModal() {
+    confirmationModal.classList.remove("active");
+}
+
+function confirmSending() {
+    closeConfirmationModal();
+    startSending();
+}
+
+// Main Send Function
+async function startSending() {
+    if (isSending) return;
 
     // Reset state
     isSending = true;
@@ -96,11 +124,14 @@ async function startSending() {
     kirimBtn.disabled = true;
     
     // Reset status
-    updateStatus("Mengirim...", "Mengirim 25 pesan...", "fa-spinner fa-spin");
+    updateStatus("Mengirim...", "Memulai pengiriman 25 pesan...", "fa-paper-plane fa-bounce");
     updateProgress(0);
-    addLog("Memulai pengiriman 25 pesan...", "info");
-    addLog(`Target: ${link}`, "info");
-    addLog(`Pesan: ${pesan}`, "info");
+    logs = [];
+    updateLogDisplay();
+    
+    addLog("🚀 Memulai pengiriman 25 pesan", "info");
+    addLog(`🎯 Target: ${currentLink}`, "info");
+    addLog(`💬 Pesan: ${currentPesan}`, "info");
 
     // Kirim pesan satu per satu dengan delay
     for (let i = 0; i < totalAttempts; i++) {
@@ -108,7 +139,7 @@ async function startSending() {
         
         try {
             // Kirim menggunakan API Deline langsung
-            const apiUrl = `https://api.deline.web.id/tools/spamngl?url=${encodeURIComponent(link)}&message=${encodeURIComponent(pesan)}`;
+            const apiUrl = `https://api.deline.web.id/tools/spamngl?url=${encodeURIComponent(currentLink)}&message=${encodeURIComponent(currentPesan)}`;
             
             const response = await fetch(apiUrl, {
                 headers: {
@@ -118,12 +149,11 @@ async function startSending() {
             });
 
             if (response.ok) {
-                const data = await response.json();
                 sentCount++;
-                addLog(`Pesan ${i + 1}: ✅ Sukses`, "success");
+                addLog(`Pesan ${i + 1}: ✅ Sukses dikirim`, "success");
             } else {
                 failedCount++;
-                addLog(`Pesan ${i + 1}: ❌ Gagal (${response.status})`, "error");
+                addLog(`Pesan ${i + 1}: ❌ Gagal (kode: ${response.status})`, "error");
             }
         } catch (error) {
             failedCount++;
@@ -135,16 +165,17 @@ async function startSending() {
         const progress = Math.round(done / totalAttempts * 100);
         updateProgress(progress);
         
-        // Update status
+        // Update status dengan animasi berbeda
+        const animIcon = i % 2 === 0 ? "fa-paper-plane fa-bounce" : "fa-rocket fa-bounce";
         updateStatus(
             "Mengirim...", 
-            `Terkirim: ${sentCount}, Gagal: ${failedCount} (${done}/${totalAttempts})`,
-            "fa-spinner fa-spin"
+            `📊 Progress: ${done}/${totalAttempts} | ✅ ${sentCount} | ❌ ${failedCount}`,
+            animIcon
         );
 
-        // Delay antar request (1-2 detik agar tidak spam)
+        // Delay antar request (0.5-1.5 detik)
         if (i < totalAttempts - 1) {
-            await delay(1000 + Math.random() * 1000);
+            await delay(500 + Math.random() * 1000);
         }
     }
 
@@ -154,16 +185,14 @@ async function startSending() {
     kirimBtn.disabled = false;
     
     // Update final status
-    if (sentCount + failedCount === totalAttempts) {
-        updateStatus(
-            "Selesai!", 
-            `Pengiriman selesai! Sukses: ${sentCount}, Gagal: ${failedCount}`,
-            "fa-check-circle"
-        );
-        
-        // Tampilkan modal hasil
-        showSuccessModal();
-    }
+    updateStatus(
+        "✅ Selesai!", 
+        `Pengiriman selesai! Sukses: ${sentCount}, Gagal: ${failedCount}`,
+        "fa-check-circle"
+    );
+    
+    // Tampilkan modal hasil
+    showSuccessModal();
 }
 
 // Helper Functions
@@ -183,7 +212,13 @@ function updateProgress(percent) {
 }
 
 function addLog(message, type = "info") {
-    const timestamp = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    const now = new Date();
+    const timestamp = now.toLocaleTimeString('id-ID', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        second: '2-digit'
+    });
+    
     const logEntry = {
         time: timestamp,
         message: message,
@@ -207,10 +242,10 @@ function updateLogDisplay() {
     
     logContent.innerHTML = logs.map(log => `
         <div class="log-item ${log.type}">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-size: 12px; color: #666;">${log.time}</span>
-                <span style="font-size: 14px; font-weight: 500;">${log.message}</span>
+            <div class="log-message">
+                <span>${log.message}</span>
             </div>
+            <div class="log-time">${log.time}</div>
         </div>
     `).join('');
 }
@@ -218,10 +253,10 @@ function updateLogDisplay() {
 function clearLogs() {
     if (logs.length === 0) return;
     
-    if (confirm("Hapus semua log aktivitas?")) {
+    if (confirm("Yakin hapus semua log aktivitas?")) {
         logs = [];
         updateLogDisplay();
-        addLog("Log berhasil dibersihkan", "info");
+        addLog("🧹 Log berhasil dibersihkan", "info");
     }
 }
 
@@ -231,25 +266,37 @@ function resetForm() {
             isSending = false;
             kirimBtn.innerHTML = "<i class='fas fa-paper-plane'></i> KIRIM PESAN";
             kirimBtn.disabled = false;
-            addLog("Pengiriman dibatalkan oleh pengguna", "info");
+            addLog("⏹️ Pengiriman dibatalkan", "info");
         } else {
             return;
         }
     }
     
     linkInput.value = "";
-    pesanInput.value = "";
+    pesanInput.value = "isi pesan yang ingin di kirim kan cuy";
     
     // Reset status display
-    updateStatus("Menunggu", "Belum ada pengiriman pesan", "fa-clock");
+    updateStatus("⏳ Menunggu", "Belum ada pengiriman pesan", "fa-clock");
     updateProgress(0);
     
-    addLog("Form berhasil direset", "info");
+    addLog("🔄 Form berhasil direset", "info");
 }
 
 function showSuccessModal() {
     successCount.textContent = sentCount;
     failCount.textContent = failedCount;
+    
+    // Set pesan hasil
+    if (sentCount === totalAttempts) {
+        resultMessage.textContent = "🎉 Semua pesan berhasil dikirim!";
+    } else if (sentCount > failedCount) {
+        resultMessage.textContent = "👍 Mayoritas pesan berhasil dikirim!";
+    } else if (sentCount === 0) {
+        resultMessage.textContent = "😞 Tidak ada pesan yang berhasil dikirim.";
+    } else {
+        resultMessage.textContent = "⚠️ Beberapa pesan gagal dikirim.";
+    }
+    
     successModal.classList.add("active");
 }
 
@@ -260,19 +307,18 @@ function closeSuccessModal() {
 // Initialize
 updateLogDisplay();
 
-// API Fallback function (tidak langsung digunakan, backup saja)
-async function sendViaAPI(link, pesan) {
-    try {
-        // Coba API lokal dulu (jika ada)
-        const localApi = `/api/send?link=${encodeURIComponent(link)}&pesan=${encodeURIComponent(pesan)}`;
-        
-        const response = await fetch(localApi);
-        if (response.ok) {
-            const data = await response.json();
-            return data.status === true;
+// Auto focus ke input link saat halaman load
+window.onload = function() {
+    linkInput.focus();
+    linkInput.addEventListener('focus', function() {
+        if (this.value === 'isi link nya di sini yach.....') {
+            this.value = 'https://ngl.link/';
         }
-        return false;
-    } catch {
-        return false;
-    }
-}
+    });
+    
+    pesanInput.addEventListener('focus', function() {
+        if (this.value === 'isi pesan yang ingin di kirim kan cuy') {
+            this.value = '';
+        }
+    });
+};
