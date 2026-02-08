@@ -23,11 +23,11 @@
         </div>
         
         <div class="sidebar-content">
-            <button class="sidebar-btn" data-page="statusPage">
+            <button class="sidebar-btn" onclick="openPage('status')">
                 <i class="fas fa-history"></i> Status Pengiriman
             </button>
 
-            <button class="sidebar-btn" data-page="statPage">
+            <button class="sidebar-btn" onclick="openPage('statistik')">
                 <i class="fas fa-chart-bar"></i> Statistik
             </button>
 
@@ -41,76 +41,8 @@
         </div>
     </div>
 
-    <!-- STATUS PAGE -->
-    <div id="statusPage" class="statusPage">
-        <div class="status-header">
-            <button onclick="closeAllPages()" class="backBtn">
-                <i class="fas fa-arrow-left"></i> Kembali
-            </button>
-            <h2><i class="fas fa-history"></i> Status Pengiriman</h2>
-        </div>
-
-        <div class="card result-card">
-            <div class="result-container">
-                <div class="status-indicator">
-                    <div class="status-icon">
-                        <i class="fas fa-clock" id="status-icon"></i>
-                    </div>
-                    <div class="status-text">
-                        <h3 id="status-title">Menunggu</h3>
-                        <p id="status-desc">Belum ada pengiriman pesan</p>
-                    </div>
-                </div>
-
-                <div class="progress-container">
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="progress-fill"></div>
-                    </div>
-                    <div class="progress-text" id="progress-text">0% (0/25)</div>
-                </div>
-
-                <div class="log-container">
-                    <div class="log-header">
-                        <h4><i class="fas fa-clipboard-list"></i> Log Aktivitas</h4>
-                        <button id="clear-log" class="btn-small">
-                            <i class="fas fa-trash"></i> Hapus Log
-                        </button>
-                    </div>
-                    <div class="log-content" id="log-content">
-                        <div class="log-empty">
-                            <i class="fas fa-clipboard-list"></i>
-                            <p>Log aktivitas akan muncul di sini</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- STATISTIK PAGE -->
-    <div id="statPage" class="statusPage">
-        <div class="status-header">
-            <button onclick="closeAllPages()" class="backBtn">
-                <i class="fas fa-arrow-left"></i> Kembali
-            </button>
-            <h2><i class="fas fa-chart-bar"></i> Statistik</h2>
-        </div>
-
-        <div class="card result-card">
-            <div class="result-container" style="text-align:center">
-                <h3>TOTAL PENGGUNA</h3>
-
-                <div id="visitCount" class="visit-count-animation">
-                    0
-                </div>
-
-                <p style="color:#666">Realtime visitor</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- MAIN PAGE -->
-    <div class="container" id="mainPage">
+    <!-- MAIN PAGE (DEFAULT) -->
+    <div id="mainPage" class="page active">
         <!-- TOP BAR -->
         <div class="topbar">
             <button id="menuBtn" class="menu-btn">
@@ -125,13 +57,13 @@
         <!-- HEADER BANNER -->
         <div class="header-banner">
             <div class="banner-content">
-                <h2 class="banner-title animate-fade-in">NGL SPAM</h2>
-                <p class="banner-subtitle animate-slide-up">BY DAN Z TSUYOI</p>
+                <h2 class="banner-title">NGL SPAM</h2>
+                <p class="banner-subtitle">BY DAN Z TSUYOI</p>
             </div>
         </div>
 
         <!-- MAIN CONTENT -->
-        <div class="card animate-fade-in-up">
+        <div class="card">
             <div class="card-header">
                 <h2><i class="fas fa-cogs"></i> Konfigurasi Pesan</h2>
                 <p class="card-subtitle">Isi form di bawah ini untuk mengirim pesan</p>
@@ -148,31 +80,103 @@
                     <textarea id="pesan" placeholder="masukkan pesan yang akan dikirimkan" class="placeholder-abu"></textarea>
                 </div>
 
-                <div class="info-box animate-pulse">
+                <div class="info-box">
                     <i class="fas fa-info-circle"></i>
                     <p><strong>Info:</strong> Pesan akan dikirim sebanyak 25 kali secara otomatis</p>
                 </div>
 
                 <div class="button-group">
-                    <button id="lihat-status" class="btn-secondary" onclick="openStatusPage()">
+                    <button id="lihat-status" class="btn-secondary" onclick="openPage('status')">
                         <i class="fas fa-history"></i> Lihat Status
                     </button>
-                    <button id="kirim" class="btn-primary btn-animate">
+                    <button id="kirim" class="btn-primary">
                         <i class="fas fa-paper-plane"></i> KIRIM PESAN
                     </button>
                 </div>
                 
                 <div class="button-group">
-                    <button id="reset" class="btn-secondary btn-animate">
+                    <button id="reset" class="btn-secondary">
                         <i class="fas fa-redo"></i> RESET
                     </button>
                 </div>
             </div>
         </div>
 
-        <footer class="animate-fade-in-up">
+        <footer>
             <p><i class="fas fa-code"></i> Created by Agas</p>
         </footer>
+    </div>
+
+    <!-- STATUS PAGE -->
+    <div id="statusPage" class="page">
+        <div class="page-header">
+            <button onclick="closeAllPages()" class="backBtn">
+                <i class="fas fa-arrow-left"></i> Kembali
+            </button>
+            <h2><i class="fas fa-history"></i> Status Pengiriman</h2>
+        </div>
+
+        <div class="page-content">
+            <div class="card result-card">
+                <div class="result-container">
+                    <div class="status-indicator">
+                        <div class="status-icon">
+                            <i class="fas fa-clock" id="status-icon"></i>
+                        </div>
+                        <div class="status-text">
+                            <h3 id="status-title">Menunggu</h3>
+                            <p id="status-desc">Belum ada pengiriman pesan</p>
+                        </div>
+                    </div>
+
+                    <div class="progress-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progress-fill"></div>
+                        </div>
+                        <div class="progress-text" id="progress-text">0% (0/25)</div>
+                    </div>
+
+                    <div class="log-container">
+                        <div class="log-header">
+                            <h4><i class="fas fa-clipboard-list"></i> Log Aktivitas</h4>
+                            <button id="clear-log" class="btn-small">
+                                <i class="fas fa-trash"></i> Hapus Log
+                            </button>
+                        </div>
+                        <div class="log-content" id="log-content">
+                            <div class="log-empty">
+                                <i class="fas fa-clipboard-list"></i>
+                                <p>Log aktivitas akan muncul di sini</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- STATISTIK PAGE -->
+    <div id="statPage" class="page">
+        <div class="page-header">
+            <button onclick="closeAllPages()" class="backBtn">
+                <i class="fas fa-arrow-left"></i> Kembali
+            </button>
+            <h2><i class="fas fa-chart-bar"></i> Statistik</h2>
+        </div>
+
+        <div class="page-content">
+            <div class="card result-card">
+                <div class="result-container" style="text-align:center">
+                    <h3>TOTAL PENGGUNA</h3>
+
+                    <div id="visitCount" class="visit-count-animation">
+                        0
+                    </div>
+
+                    <p style="color:#666">Realtime visitor</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- CONFIRMATION MODAL -->
@@ -180,7 +184,7 @@
         <div class="modal-content confirm-modal modal-small">
             <div class="modal-body">
                 <div class="confirmation-content">
-                    <div class="confirmation-icon-small animate-pulse">
+                    <div class="confirmation-icon-small">
                         <i class="fas fa-paper-plane"></i>
                     </div>
                     <h4 class="confirmation-title-small">Kirim 25 Pesan?</h4>
@@ -203,10 +207,10 @@
                 </div>
             </div>
             <div class="modal-footer-small">
-                <button onclick="cancelSending()" class="btn-cancel-small btn-animate">
+                <button onclick="cancelSending()" class="btn-cancel-small">
                     <i class="fas fa-times"></i> Batal
                 </button>
-                <button onclick="confirmSending()" class="btn-confirm-small btn-animate">
+                <button onclick="confirmSending()" class="btn-confirm-small">
                     <i class="fas fa-check"></i> Oke
                 </button>
             </div>
@@ -218,7 +222,7 @@
         <div class="modal-content success-modal modal-small">
             <div class="modal-body">
                 <div class="result-summary-small">
-                    <div class="result-icon-small animate-success">
+                    <div class="result-icon-small">
                         <i class="fas fa-check-circle"></i>
                     </div>
                     <h4 class="result-title-small">Pengiriman Selesai!</h4>
@@ -244,7 +248,7 @@
                 </div>
             </div>
             <div class="modal-footer-small">
-                <button onclick="closeSuccessModal()" class="btn-close-small btn-animate">
+                <button onclick="closeSuccessModal()" class="btn-close-small">
                     <i class="fas fa-times"></i> Tutup
                 </button>
             </div>
