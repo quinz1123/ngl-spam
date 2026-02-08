@@ -23,7 +23,7 @@ let sentCount=0;
 let failedCount=0;
 let totalToSend=0;
 let logs=[];
-const REQUEST_DELAY=500;
+const REQUEST_DELAY=2000;
 
 // SIDEBAR
 menuBtn.onclick=()=>sidebar.classList.toggle("active");
@@ -73,16 +73,17 @@ const encodedPesan=encodeURIComponent(pesan);
 
 for(let i=0;i<jumlah;i++){
 
-const api=`https://api-faa.my.id/faa/ngl-spam?link=${encodedLink}&pesan=${encodedPesan}&jumlah=1`;
+const api=`/api/send?link=${encodedLink}&pesan=${encodedPesan}`;
 
 try{
-const res=await fetch(api);
-if(res.ok){
+const res = await fetch(api);
+const json = await res.json();
+if(json.status){
 sentCount++;
-addLog(`Pesan ${i+1} berhasil`,"success");
+addLog(`Pesan ${i+1} sukses`,"success");
 }else{
 failedCount++;
-addLog(`Pesan ${i+1} gagal`,"error");
+addLog(`Pesan ${i+1} error`,"error");
 }
 }catch(e){
 failedCount++;
