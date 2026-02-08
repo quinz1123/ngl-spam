@@ -45,7 +45,6 @@ const totalAttempts = 25;
 let logs = [];
 let currentLink = '';
 let currentPesan = '';
-let currentTaskId = 0;
 
 // Event Listeners
 window.addEventListener('DOMContentLoaded', function() {
@@ -59,23 +58,44 @@ function initApp() {
     menuBtn.onclick = openSidebar;
     overlay.onclick = closeSidebar;
     
+    // Setup lihat status button
+    if (lihatStatusBtn) {
+        lihatStatusBtn.onclick = openStatusPage;
+    }
+    
     // Pastikan sidebar dan halaman status tertutup saat startup
     closeSidebar();
     closeStatusPage();
     closeStatistikPage();
     
     // Initialize counter
-    counter();
+    initCounter();
     
     // Load any existing history
     if (loadHistory().length > 0) {
         updateStatus("📋 Riwayat Tersedia", "Ada riwayat pengiriman sebelumnya", "fa-history");
     }
     
-    // Setup lihat status button
-    if (lihatStatusBtn) {
-        lihatStatusBtn.onclick = openStatusPage;
-    }
+    // Setup sidebar button hover effects
+    setupSidebarHover();
+}
+
+// Setup sidebar hover effects
+function setupSidebarHover() {
+    const sidebarButtons = document.querySelectorAll('.sidebar-content button');
+    sidebarButtons.forEach(button => {
+        button.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = '#f8fafc';
+            this.style.color = '#667eea';
+            this.style.borderLeft = '4px solid #667eea';
+        });
+        
+        button.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = '';
+            this.style.color = '';
+            this.style.borderLeft = '';
+        });
+    });
 }
 
 // SIDEBAR FUNCTIONS
@@ -91,7 +111,6 @@ function closeSidebar() {
 
 // STATUS PAGE FUNCTIONS
 function openStatusPage() {
-    console.log("Membuka halaman status...");
     renderHistory();
     statusPage.classList.add("active");
     closeSidebar();
@@ -171,8 +190,7 @@ async function startSending() {
     }
     
     isSending = true;
-    currentTaskId++;
-
+    
     // Reset counters
     sentCount = 0;
     failedCount = 0;
@@ -182,7 +200,7 @@ async function startSending() {
     kirimBtn.disabled = true;
     kirimBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> MENGIRIM...';
     updateProgress(0);
-    updateStatus("📤 Mengirim", "Sedang mengirim 25 pesan...", "fa-paper-plane");
+    updateStatus("📤 Mengirim", "Sedang mengirim 25 pesan sekaligus...", "fa-paper-plane");
     
     // Clear and setup log
     clearLogs();
@@ -190,52 +208,47 @@ async function startSending() {
     addLog(`📌 Target: ${currentLink}`, "info");
     addLog(`💬 Pesan: "${currentPesan}"`, "info");
 
-    const myTaskId = currentTaskId; // Prevent race condition
-
     try {
-        // Send 25 messages one by one
-        for (let i = 1; i <= totalAttempts; i++) {
-            if (currentTaskId !== myTaskId) {
-                // New task started, stop this one
-                addLog("⚠️ Pengiriman dibatalkan oleh pengguna", "error");
-                break;
+        // Show progress animation
+        let progress = 0;
+        const progressInterval = setInterval(() => {
+            progress += 2;
+            if (progress > 90) {
+                clearInterval(progressInterval);
+                progress = 90;
             }
-            
-            // Send single message
-            const result = await sendSingleMessage(currentLink, currentPesan, i);
-            
-            // Update counters
-            if (result.success) {
-                sentCount++;
-                addLog(`Pesan ${i}: ✅ Sukses`, "success");
-            } else {
-                failedCount++;
-                addLog(`Pesan ${i}: ❌ Gagal (${result.error || 'Unknown'})`, "error");
-            }
-            
-            // Update progress
-            const progress = Math.round((i / totalAttempts) * 100);
             updateProgress(progress);
-            progressText.textContent = `${progress}% (${i}/${totalAttempts})`;
+            progressText.textContent = `${progress}% (0/25)`;
+        }, 50);
+
+        // Send ALL 25 messages at once via API
+        const result = await sendBulkMessages(currentLink, currentPesan);
+        
+        clearInterval(progressInterval);
+        
+        // Update counters based on API response
+        if (result.success) {
+            sentCount = result.data.result.berhasil_dikirim || 0;
+            failedCount = result.data.result.gagal_dikirim || 0;
             
-            // Add random delay between messages (avoid rate limiting)
-            if (i < totalAttempts) {
-                const delayTime = 800 + Math.random() * 1200; // 0.8-2 seconds
-                await delay(delayTime);
+            // Update progress to 100%
+            updateProgress(100);
+            progressText.textContent = `100% (25/25)`;
+            
+            // Show success log
+            addLog(`✅ API Response: Berhasil ${sentCount}, Gagal ${failedCount}`, "success");
+            
+            // Show target username if available
+            if (result.data.result.username_target) {
+                addLog(`🎯 Target: ${result.data.result.username_target}`, "info");
             }
-        }
-        
-        // Final update
-        updateProgress(100);
-        progressText.textContent = `100% (${totalAttempts}/${totalAttempts})`;
-        
-        // Show result
-        if (sentCount > 0) {
+            
             updateStatus("✅ Selesai", `Berhasil: ${sentCount}, Gagal: ${failedCount}`, "fa-check-circle");
-            addLog(`🎉 Pengiriman selesai! Berhasil: ${sentCount}, Gagal: ${failedCount}`, "complete");
+            addLog(`🎉 Pengiriman selesai!`, "complete");
         } else {
-            updateStatus("❌ Gagal", "Tidak ada pesan yang berhasil dikirim", "fa-exclamation-circle");
-            addLog("❌ Semua pengiriman gagal", "error");
+            failedCount = 25;
+            addLog(`❌ API Error: ${result.error}`, "error");
+            updateStatus("❌ Gagal", "API mengembalikan error", "fa-exclamation-circle");
         }
         
     } catch (error) {
@@ -256,14 +269,14 @@ async function startSending() {
     }
 }
 
-async function sendSingleMessage(link, message, index) {
+async function sendBulkMessages(link, message) {
     try {
         // Construct API URL
         const apiUrl = `https://api.deline.web.id/tools/spamngl?url=${encodeURIComponent(link)}&message=${encodeURIComponent(message)}`;
         
-        // Set timeout
+        // Set timeout (30 seconds for bulk operation)
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
         
         // Send request
         const response = await fetch(apiUrl, {
@@ -289,7 +302,7 @@ async function sendSingleMessage(link, message, index) {
             return { 
                 success: true, 
                 data: data,
-                message: `Berhasil ke ${data.result?.username_target || 'target'}`
+                message: "Berhasil mengirim 25 pesan"
             };
         } else {
             return { 
@@ -303,7 +316,7 @@ async function sendSingleMessage(link, message, index) {
         // Handle specific errors
         let errorMsg = "Network error";
         if (error.name === 'AbortError') {
-            errorMsg = "Timeout (15 detik)";
+            errorMsg = "Timeout (30 detik)";
         } else if (error.message.includes('HTTP')) {
             errorMsg = error.message;
         }
@@ -342,9 +355,13 @@ function addLog(message, type = "info") {
     // Create log item
     const logItem = document.createElement('div');
     logItem.className = `log-item log-${type}`;
+    
+    // Format waktu lebih baik
+    const timeFormatted = `<small>${time}</small>`;
+    
     logItem.innerHTML = `
-        <span>${message}</span>
-        <small>${time}</small>
+        <div class="log-message">${message}</div>
+        <div class="log-time">${timeFormatted}</div>
     `;
     
     // Add to top of log
@@ -353,6 +370,9 @@ function addLog(message, type = "info") {
     // Store in memory (limit to 50 items)
     logs.unshift({ message, time, type });
     if (logs.length > 50) logs.pop();
+    
+    // Auto scroll to top
+    logContent.scrollTop = 0;
 }
 
 function clearLogs() {
@@ -370,8 +390,6 @@ function resetForm() {
         if (!confirm("Pengiriman sedang berjalan. Reset form?")) {
             return;
         }
-        // Cancel current task
-        currentTaskId++;
     }
     
     linkInput.value = "";
@@ -404,10 +422,6 @@ function closeSuccessModal() {
 }
 
 // UTILITY FUNCTIONS
-function delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 function saveToHistory() {
     const history = loadHistory();
     
@@ -468,10 +482,11 @@ function renderHistory() {
     // Add history header
     addLog("📋 RIWAYAT PENGGUNAAN", "start");
     
-    // Show latest 5 entries
+    // Show latest 5 entries with better formatting
     history.slice(0, 5).forEach((entry, index) => {
         const status = entry.sukses > entry.gagal ? "✅" : "⚠️";
-        addLog(`${status} ${entry.waktu} | ✅${entry.sukses} ❌${entry.gagal} | ${entry.pesan}`, "info");
+        const pesanShort = entry.pesan.length > 30 ? entry.pesan.substring(0, 27) + "..." : entry.pesan;
+        addLog(`${status} ${entry.waktu} | ✅${entry.sukses} ❌${entry.gagal} | ${pesanShort}`, "info");
     });
     
     if (history.length > 5) {
@@ -479,20 +494,31 @@ function renderHistory() {
     }
 }
 
-// VISIT COUNTER
-const VISIT_KEY = "ngl_visit_once";
+// VISIT COUNTER - FIXED
+const VISIT_KEY = "ngl_visit_counted";
 const visitRef = firebase.firestore().collection("stats").doc("visits");
 
-async function counter() {
-    // Only count once per session
-    if (!sessionStorage.getItem(VISIT_KEY)) {
+async function initCounter() {
+    // Only count once per device (using localStorage, not sessionStorage)
+    if (!localStorage.getItem(VISIT_KEY)) {
         try {
+            // First, get current count
+            const doc = await visitRef.get();
+            let currentCount = 0;
+            
+            if (doc.exists) {
+                currentCount = doc.data().total || 0;
+            }
+            
+            // Increment by 1
             await visitRef.set({
-                total: firebase.firestore.FieldValue.increment(1),
+                total: currentCount + 1,
                 lastUpdate: new Date().toISOString()
             }, { merge: true });
             
-            sessionStorage.setItem(VISIT_KEY, "counted");
+            // Mark as counted
+            localStorage.setItem(VISIT_KEY, "true");
+            console.log("Visitor counted: ", currentCount + 1);
         } catch (error) {
             console.error("Error updating counter:", error);
         }
@@ -502,7 +528,10 @@ async function counter() {
     visitRef.onSnapshot(doc => {
         if (doc.exists) {
             const count = doc.data().total || 0;
-            document.getElementById("visitCount").innerText = count.toLocaleString('id-ID');
+            const visitCountElement = document.getElementById("visitCount");
+            if (visitCountElement) {
+                visitCountElement.innerText = count.toLocaleString('id-ID');
+            }
         }
     }, error => {
         console.error("Error listening to counter:", error);
