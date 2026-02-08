@@ -28,7 +28,7 @@ const statusPage = document.getElementById("statusPage");
 let isSending = false;
 let sentCount = 0;
 let failedCount = 0;
-const totalAttempts = 25; // Fix 25 pesan
+const totalAttempts = 25;
 let logs = [];
 let currentLink = '';
 let currentPesan = '';
@@ -70,7 +70,7 @@ clearLogBtn.onclick = clearLogs;
 // Close modal when clicking outside
 window.onclick = function(event) {
     if (event.target === confirmationModal) {
-        closeConfirmationModal();
+        cancelSending();
     }
     if (event.target === successModal) {
         closeSuccessModal();
@@ -83,12 +83,12 @@ function showConfirmationModal() {
     currentPesan = pesanInput.value.trim();
 
     if (!currentLink || !currentPesan) {
-        return alert("Link NGL dan pesan harus diisi yach!");
+        return showAlert("error", "Link NGL dan pesan harus diisi yach!");
     }
 
     // Validasi format link NGL
     if (!currentLink.includes('ngl.link/')) {
-        return alert("Format link NGL tidak valid cuy!\nContoh: https://ngl.link/username");
+        return showAlert("error", "Format link NGL tidak valid cuy!\nContoh: https://ngl.link/username");
     }
 
     // Potong teks jika terlalu panjang
@@ -101,16 +101,36 @@ function showConfirmationModal() {
     confirmationModal.classList.add("active");
 }
 
-function closeConfirmationModal() {
+function cancelSending() {
     confirmationModal.classList.remove("active");
 }
 
 function confirmSending() {
-    closeConfirmationModal();
+    confirmationModal.classList.remove("active");
     startSending();
 }
 
-// Main Send Function
+// Custom Alert Function
+function showAlert(type, message) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `custom-alert ${type}`;
+    alertDiv.innerHTML = `
+        <i class="fas fa-${type === 'error' ? 'exclamation-triangle' : 'info-circle'}"></i>
+        <span>${message}</span>
+        <button onclick="this.parentElement.remove()">&times;</button>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (alertDiv.parentElement) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+
+// Main Send Function - PARALLEL & CEPAT
 async function startSending() {
     if (isSending) return;
 
@@ -123,59 +143,57 @@ async function startSending() {
     kirimBtn.innerHTML = "<i class='fas fa-spinner fa-spin'></i> MENGIRIM...";
     kirimBtn.disabled = true;
     
+    // Buka status page
+    openStatus();
+    
     // Reset status
-    updateStatus("Mengirim...", "Memulai pengiriman 25 pesan...", "fa-paper-plane fa-bounce");
+    updateStatus("⚡ Mengirim...", "Memulai pengiriman 25 pesan secara paralel...", "fa-bolt fa-spin");
     updateProgress(0);
     logs = [];
     updateLogDisplay();
     
     addLog("🚀 Memulai pengiriman 25 pesan", "info");
     addLog(`🎯 Target: ${currentLink}`, "info");
-    addLog(`💬 Pesan: ${currentPesan}`, "info");
+    addLog(`💬 Pesan: "${currentPesan}"`, "info");
 
-    // Kirim pesan satu per satu dengan delay
-    for (let i = 0; i < totalAttempts; i++) {
+    // Array untuk menyimpan semua promise
+    const promises = [];
+    
+    // Kirim 25 pesan secara paralel dengan batch
+    const batchSize = 5; // Kirim 5 pesan sekaligus
+    const totalBatches = Math.ceil(totalAttempts / batchSize);
+
+    for (let batch = 0; batch < totalBatches; batch++) {
         if (!isSending) break; // Stop jika dibatalkan
         
-        try {
-            // Kirim menggunakan API Deline langsung
-            const apiUrl = `https://api.deline.web.id/tools/spamngl?url=${encodeURIComponent(currentLink)}&message=${encodeURIComponent(currentPesan)}`;
-            
-            const response = await fetch(apiUrl, {
-                headers: {
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                    "Accept": "application/json"
-                }
-            });
-
-            if (response.ok) {
-                sentCount++;
-                addLog(`Pesan ${i + 1}: ✅ Sukses dikirim`, "success");
-            } else {
-                failedCount++;
-                addLog(`Pesan ${i + 1}: ❌ Gagal (kode: ${response.status})`, "error");
-            }
-        } catch (error) {
-            failedCount++;
-            addLog(`Pesan ${i + 1}: ⚠️ Error jaringan`, "error");
+        const startIdx = batch * batchSize;
+        const endIdx = Math.min(startIdx + batchSize, totalAttempts);
+        
+        // Kirim batch saat ini secara paralel
+        const batchPromises = [];
+        
+        for (let i = startIdx; i < endIdx; i++) {
+            batchPromises.push(sendSingleMessage(i));
         }
-
-        // Update progress
+        
+        // Tunggu batch selesai
+        await Promise.allSettled(batchPromises);
+        
+        // Update progress setelah batch selesai
         const done = sentCount + failedCount;
         const progress = Math.round(done / totalAttempts * 100);
         updateProgress(progress);
         
-        // Update status dengan animasi berbeda
-        const animIcon = i % 2 === 0 ? "fa-paper-plane fa-bounce" : "fa-rocket fa-bounce";
+        // Update status
         updateStatus(
-            "Mengirim...", 
+            "⚡ Mengirim...", 
             `📊 Progress: ${done}/${totalAttempts} | ✅ ${sentCount} | ❌ ${failedCount}`,
-            animIcon
+            "fa-paper-plane fa-bounce"
         );
 
-        // Delay antar request (0.5-1.5 detik)
-        if (i < totalAttempts - 1) {
-            await delay(500 + Math.random() * 1000);
+        // Delay kecil antara batch (100ms)
+        if (batch < totalBatches - 1) {
+            await delay(100);
         }
     }
 
@@ -193,6 +211,38 @@ async function startSending() {
     
     // Tampilkan modal hasil
     showSuccessModal();
+}
+
+// Fungsi untuk kirim single message
+async function sendSingleMessage(index) {
+    try {
+        // Kirim menggunakan API Deline langsung
+        const apiUrl = `https://api.deline.web.id/tools/spamngl?url=${encodeURIComponent(currentLink)}&message=${encodeURIComponent(currentPesan)}`;
+        
+        const response = await fetch(apiUrl, {
+            headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Accept": "application/json"
+            },
+            // Timeout 10 detik
+            signal: AbortSignal.timeout(10000)
+        });
+
+        if (response.ok) {
+            sentCount++;
+            addLog(`Pesan ${index + 1}: ✅ Sukses`, "success");
+        } else {
+            failedCount++;
+            addLog(`Pesan ${index + 1}: ❌ Gagal (${response.status})`, "error");
+        }
+    } catch (error) {
+        failedCount++;
+        if (error.name === 'AbortError') {
+            addLog(`Pesan ${index + 1}: ⏰ Timeout`, "error");
+        } else {
+            addLog(`Pesan ${index + 1}: ⚠️ Error`, "error");
+        }
+    }
 }
 
 // Helper Functions
@@ -240,10 +290,13 @@ function updateLogDisplay() {
         return;
     }
     
-    logContent.innerHTML = logs.map(log => `
+    // Batasi log maksimal 50 item
+    const displayLogs = logs.slice(0, 50);
+    
+    logContent.innerHTML = displayLogs.map(log => `
         <div class="log-item ${log.type}">
             <div class="log-message">
-                <span>${log.message}</span>
+                ${log.message}
             </div>
             <div class="log-time">${log.time}</div>
         </div>
@@ -273,7 +326,7 @@ function resetForm() {
     }
     
     linkInput.value = "";
-    pesanInput.value = "isi pesan yang ingin di kirim kan cuy";
+    pesanInput.value = "";
     
     // Reset status display
     updateStatus("⏳ Menunggu", "Belum ada pengiriman pesan", "fa-clock");
@@ -307,18 +360,88 @@ function closeSuccessModal() {
 // Initialize
 updateLogDisplay();
 
+// Add custom alert styles
+const style = document.createElement('style');
+style.textContent = `
+    .custom-alert {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: white;
+        padding: 15px 20px;
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        z-index: 9999;
+        animation: slideInRight 0.3s ease;
+        max-width: 350px;
+        border-left: 4px solid #667eea;
+    }
+    
+    .custom-alert.error {
+        border-left-color: #ff6b6b;
+    }
+    
+    .custom-alert i {
+        font-size: 20px;
+        color: #667eea;
+    }
+    
+    .custom-alert.error i {
+        color: #ff6b6b;
+    }
+    
+    .custom-alert span {
+        flex: 1;
+        font-size: 14px;
+        color: #333;
+    }
+    
+    .custom-alert button {
+        background: none;
+        border: none;
+        font-size: 20px;
+        color: #999;
+        cursor: pointer;
+        padding: 0;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+    }
+    
+    .custom-alert button:hover {
+        background: #f5f5f5;
+        color: #666;
+    }
+    
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+`;
+document.head.appendChild(style);
+
 // Auto focus ke input link saat halaman load
 window.onload = function() {
-    linkInput.focus();
-    linkInput.addEventListener('focus', function() {
-        if (this.value === 'isi link nya di sini yach.....') {
-            this.value = 'https://ngl.link/';
-        }
-    });
+    // Set placeholder text
+    linkInput.placeholder = "https://ngl.link/username";
+    pesanInput.placeholder = "masukkan pesan yang akan dikirimkan";
     
-    pesanInput.addEventListener('focus', function() {
-        if (this.value === 'isi pesan yang ingin di kirim kan cuy') {
-            this.value = '';
-        }
-    });
+    // Clear form jika ada value default
+    if (!linkInput.value) linkInput.value = "";
+    if (!pesanInput.value) pesanInput.value = "";
+    
+    // Focus ke input link
+    linkInput.focus();
 };
