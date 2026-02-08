@@ -48,18 +48,21 @@ let currentPesan = '';
 let currentTaskId = 0;
 
 // Event Listeners
-kirimBtn.onclick = showConfirmationModal;
-resetBtn.onclick = resetForm;
-clearLogBtn.onclick = clearLogs;
-menuBtn.onclick = openSidebar;
-overlay.onclick = closeSidebar;
-
-// Initialization
 window.addEventListener('DOMContentLoaded', function() {
-    // Ensure sidebar is closed on page load
+    initApp();
+});
+
+function initApp() {
+    kirimBtn.onclick = showConfirmationModal;
+    resetBtn.onclick = resetForm;
+    clearLogBtn.onclick = clearLogs;
+    menuBtn.onclick = openSidebar;
+    overlay.onclick = closeSidebar;
+    
+    // Pastikan sidebar dan halaman status tertutup saat startup
     closeSidebar();
-    closeStatus();
-    closeStatistik();
+    closeStatusPage();
+    closeStatistikPage();
     
     // Initialize counter
     counter();
@@ -68,7 +71,12 @@ window.addEventListener('DOMContentLoaded', function() {
     if (loadHistory().length > 0) {
         updateStatus("📋 Riwayat Tersedia", "Ada riwayat pengiriman sebelumnya", "fa-history");
     }
-});
+    
+    // Setup lihat status button
+    if (lihatStatusBtn) {
+        lihatStatusBtn.onclick = openStatusPage;
+    }
+}
 
 // SIDEBAR FUNCTIONS
 function openSidebar() {
@@ -81,25 +89,29 @@ function closeSidebar() {
     overlay.classList.remove("active");
 }
 
-function openStatus() {
+// STATUS PAGE FUNCTIONS
+function openStatusPage() {
+    console.log("Membuka halaman status...");
     renderHistory();
     statusPage.classList.add("active");
     closeSidebar();
 }
 
-function closeStatus() {
+function closeStatusPage() {
     statusPage.classList.remove("active");
 }
 
-function openStatistik() {
+// STATISTIK PAGE FUNCTIONS
+function openStatistikPage() {
     statPage.classList.add("active");
     closeSidebar();
 }
 
-function closeStatistik() {
+function closeStatistikPage() {
     statPage.classList.remove("active");
 }
 
+// INFO FUNCTION
 function showInfo() {
     alert("NGL Spam Tool v2.0\n\nFitur:\n• Kirim 25 pesan ke NGL sekaligus\n• Riwayat pengiriman\n• Statistik pengguna realtime\n• Progress tracking\n• Log aktivitas detail\n\nPastikan link NGL valid!\n\nCreator: Agas");
     closeSidebar();
@@ -209,7 +221,6 @@ async function startSending() {
             // Add random delay between messages (avoid rate limiting)
             if (i < totalAttempts) {
                 const delayTime = 800 + Math.random() * 1200; // 0.8-2 seconds
-                addLog(`⏳ Delay ${Math.round(delayTime)}ms sebelum pesan ${i+1}...`, "info");
                 await delay(delayTime);
             }
         }
@@ -446,9 +457,6 @@ function loadHistory() {
 function renderHistory() {
     const history = loadHistory();
     
-    // Go to status page first
-    openStatus();
-    
     // Clear current logs
     clearLogs();
     
@@ -501,13 +509,13 @@ async function counter() {
     });
 }
 
-// Export functions for HTML onclick
+// EXPORT FUNCTIONS FOR HTML ONCLICK
 window.cancelSending = cancelSending;
 window.confirmSending = confirmSending;
 window.closeSuccessModal = closeSuccessModal;
 window.closeSidebar = closeSidebar;
-window.openStatus = openStatus;
-window.closeStatus = closeStatus;
-window.openStatistik = openStatistik;
-window.closeStatistik = closeStatistik;
+window.openStatusPage = openStatusPage;
+window.closeStatusPage = closeStatusPage;
+window.openStatistikPage = openStatistikPage;
+window.closeStatistikPage = closeStatistikPage;
 window.showInfo = showInfo;
