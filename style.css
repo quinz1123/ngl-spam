@@ -567,3 +567,112 @@ footer i.fa-heart {
         font-size: 1rem;
     }
 }
+
+/* Tambahkan ini di bagian akhir style.css */
+
+/* Style untuk log warning */
+.log-item.warning {
+    border-left-color: #ffa726;
+    background-color: #fff3e0;
+}
+
+.log-item.warning i {
+    color: #ffa726;
+}
+
+/* Style untuk log error yang lebih jelas */
+.log-item.error {
+    border-left-color: #ff6b6b;
+    background-color: #ffebee;
+}
+
+.log-item.error i {
+    color: #ff6b6b;
+}
+
+/* Style untuk log success */
+.log-item.success {
+    border-left-color: #38ef7d;
+    background-color: #e8f5e9;
+}
+
+.log-item.success i {
+    color: #38ef7d;
+}
+
+/* Tooltip untuk informasi error */
+.tooltip {
+    position: relative;
+    display: inline-block;
+    cursor: help;
+}
+
+.tooltip .tooltiptext {
+    visibility: hidden;
+    width: 200px;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 10px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -100px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-size: 0.9rem;
+}
+
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Badge untuk jumlah error/success */
+.badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-left: 8px;
+}
+
+.badge.success {
+    background-color: #38ef7d;
+    color: white;
+}
+
+.badge.error {
+    background-color: #ff6b6b;
+    color: white;
+}
+
+.badge.warning {
+    background-color: #ffa726;
+    color: white;
+}
+
+/* Animasi untuk log baru */
+@keyframes highlight {
+    0% { background-color: rgba(71, 118, 230, 0.3); }
+    100% { background-color: inherit; }
+}
+
+.log-item.highlight {
+    animation: highlight 1s ease;
+}
+
+/* Button untuk stop sending */
+.btn-stop {
+    background: linear-gradient(90deg, #ff6b6b 0%, #ff8e8e 100%);
+    color: white;
+}
+
+.btn-stop:hover {
+    background: linear-gradient(90deg, #ff5252 0%, #ff7b7b 100%);
+    transform: translateY(-3px);
+    box-shadow: 0 7px 15px rgba(255, 107, 107, 0.4);
+}
