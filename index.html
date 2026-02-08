@@ -23,6 +23,22 @@
         </div>
         
         <div class="sidebar-content">
+    <button onclick="openStatus()">
+        <i class="fas fa-history"></i> Status Pengiriman
+    </button>
+
+    <button onclick="openStatistik()">
+        <i class="fas fa-chart-bar"></i> Statistik
+    </button>
+
+    <button onclick="window.open('https://wa.me/')">
+        <i class="fab fa-whatsapp"></i> WhatsApp
+    </button>
+
+    <button onclick="showInfo()">
+        <i class="fas fa-info-circle"></i> Info
+    </button>
+</div>
             <button onclick="openStatus()">
                 <i class="fas fa-history"></i> Status Pengiriman
             </button>
@@ -80,7 +96,27 @@
             </div>
         </div>
     </div>
+<!-- STATISTIK PAGE -->
+<div id="statPage" class="statusPage">
+    <div class="status-header">
+        <button onclick="closeStatistik()" class="backBtn">
+            <i class="fas fa-arrow-left"></i> Kembali
+        </button>
+        <h2><i class="fas fa-chart-bar"></i> Statistik</h2>
+    </div>
 
+    <div class="card result-card">
+        <div class="result-container" style="text-align:center">
+            <h3>TOTAL PENGGUNA</h3>
+
+            <div id="visitCount" style="font-size:60px;font-weight:700;margin:20px 0">
+                0
+            </div>
+
+            <p style="color:#666">Realtime visitor</p>
+        </div>
+    </div>
+</div>
     <!-- MAIN PAGE -->
     <div class="container">
         <!-- TOP BAR -->
