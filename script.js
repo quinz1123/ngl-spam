@@ -1,13 +1,24 @@
-// DOM Elements
+// ================= FIREBASE =================
+const firebaseConfig = {
+  apiKey: "AIzaSyD6YeP5f1AQD-abEjT5puQqT7HhysptLQs",
+  authDomain: "ngl-project-9eb40.firebaseapp.com",
+  projectId: "ngl-project-9eb40",
+  storageBucket: "ngl-project-9eb40.firebasestorage.app",
+  messagingSenderId: "744594564980",
+  appId: "1:744594564980:web:26137932ef850ed0c3ee21"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// ================= DOM =================
 const linkInput = document.getElementById('link');
 const pesanInput = document.getElementById('pesan');
 const kirimBtn = document.getElementById('kirim');
 const resetBtn = document.getElementById('reset');
-const lihatStatusBtn = document.getElementById('lihat-status');
 const progressFill = document.getElementById('progress-fill');
 const progressText = document.getElementById('progress-text');
 const logContent = document.getElementById('log-content');
-const clearLogBtn = document.getElementById('clear-log');
 const confirmationModal = document.getElementById('confirmation-modal');
 const successModal = document.getElementById('success-modal');
 const confirmLink = document.getElementById('confirm-link');
@@ -19,6 +30,14 @@ const statusTitle = document.getElementById('status-title');
 const statusDesc = document.getElementById('status-desc');
 const statusIcon = document.getElementById('status-icon');
 
+const menuBtn = document.getElementById("menuBtn");
+const sidebar = document.getElementById("sidebar");
+const overlay = document.getElementById("overlay");
+const statusPage = document.getElementById("statusPage");
+const statPage = document.getElementById("statPage");
+const visitCount = document.getElementById("visitCount");
+
+// ================= STATE =================
 let isSending = false;
 let sentCount = 0;
 let failedCount = 0;
@@ -27,13 +46,42 @@ let logs = [];
 let currentLink = '';
 let currentPesan = '';
 
-// EVENTS
+// ================= SIDEBAR =================
+menuBtn.onclick = () => {
+    sidebar.classList.add("active");
+    overlay.classList.add("active");
+};
+
+overlay.onclick = closeSidebar;
+
+function closeSidebar() {
+    sidebar.classList.remove("active");
+    overlay.classList.remove("active");
+}
+
+function openStatus() {
+    renderHistory();
+    statusPage.classList.add("active");
+    closeSidebar();
+}
+
+function closeStatus() {
+    statusPage.classList.remove("active");
+}
+
+function openStatistik() {
+    statPage.classList.add("active");
+    closeSidebar();
+}
+
+function closeStatistik() {
+    statPage.classList.remove("active");
+}
+
+// ================= MODAL =================
 kirimBtn.onclick = showConfirmationModal;
 resetBtn.onclick = resetForm;
-lihatStatusBtn.onclick = () => statusPage.classList.add("active");
-clearLogBtn.onclick = clearLogs;
 
-// CONFIRM
 function showConfirmationModal() {
     currentLink = linkInput.value.trim();
     currentPesan = pesanInput.value.trim();
@@ -52,7 +100,11 @@ function confirmSending() {
     startSending();
 }
 
-// MAIN SEND (SINGLE REQUEST)
+function closeSuccessModal() {
+    successModal.classList.remove("active");
+}
+
+// ================= SEND =================
 async function startSending() {
     if (isSending) return;
     isSending = true;
@@ -78,7 +130,6 @@ async function startSending() {
 
         if (!data.status) throw "API ERROR";
 
-        // PAKAI DATA ASLI API
         sentCount = data.result.berhasil_dikirim;
         failedCount = data.result.gagal_dikirim;
 
@@ -98,20 +149,19 @@ async function startSending() {
 
     const history = loadHistory();
 
-history.unshift({
-    link: currentLink,
-    pesan: currentPesan,
-    sukses: sentCount,
-    gagal: failedCount,
-    waktu: new Date().toLocaleString()
-});
+    history.unshift({
+        link: currentLink,
+        pesan: currentPesan,
+        sukses: sentCount,
+        gagal: failedCount,
+        waktu: new Date().toLocaleString()
+    });
 
-saveHistory(history.slice(0,10));
-
-setTimeout(showSuccessModal, 400);
+    saveHistory(history.slice(0,10));
+    setTimeout(showSuccessModal, 400);
 }
 
-// UI HELPERS
+// ================= UI =================
 function updateProgress(p) {
     progressFill.style.width = p + "%";
     progressText.textContent = `${p}%`;
@@ -130,11 +180,6 @@ function addLog(msg) {
     ).join("");
 }
 
-function clearLogs() {
-    logs = [];
-    logContent.innerHTML = "";
-}
-
 function resetForm() {
     linkInput.value = "";
     pesanInput.value = "";
@@ -147,34 +192,7 @@ function showSuccessModal() {
     successModal.classList.add("active");
 }
 
-function closeSuccessModal() {
-    successModal.classList.remove("active");
-}
-const menuBtn = document.getElementById("menuBtn");
-const sidebar = document.getElementById("sidebar");
-const overlay = document.getElementById("overlay");
-const statusPage = document.getElementById("statusPage");
-
-menuBtn.onclick = () => {
-    sidebar.classList.add("active");
-    overlay.classList.add("active");
-};
-
-overlay.onclick = () => {
-    sidebar.classList.remove("active");
-    overlay.classList.remove("active");
-};
-
-function openStatus() {
-    renderHistory();
-    statusPage.classList.add("active");
-    sidebar.classList.remove("active");
-    overlay.classList.remove("active");
-}
-
-function closeStatus() {
-    statusPage.classList.remove("active");
-}
+// ================= HISTORY =================
 function saveHistory(data) {
     localStorage.setItem("ngl_history", JSON.stringify(data));
 }
@@ -183,15 +201,40 @@ function loadHistory() {
     const h = localStorage.getItem("ngl_history");
     return h ? JSON.parse(h) : [];
 }
+
 function renderHistory() {
     const history = loadHistory();
-
-    if (!history.length) {
-        addLog("Belum ada riwayat");
-        return;
-    }
+    if (!history.length) return;
 
     history.forEach(h => {
         addLog(`📌 ${h.waktu} | ✅ ${h.sukses} | ❌ ${h.gagal}`);
     });
+}
+
+// ================= FIREBASE VISITOR (ANTI REFRESH) =================
+const VISIT_KEY = "ngl_unique_device";
+const visitRef = db.collection("stats").doc("visitors");
+
+async function firebaseCounter() {
+
+    if (!localStorage.getItem(VISIT_KEY)) {
+        await visitRef.set({
+            total: firebase.firestore.FieldValue.increment(1)
+        }, { merge:true });
+
+        localStorage.setItem(VISIT_KEY,"1");
+    }
+
+    visitRef.onSnapshot(doc=>{
+        if(doc.exists){
+            visitCount.textContent = doc.data().total || 0;
+        }
+    });
+}
+
+window.addEventListener("load", firebaseCounter);
+
+// ================= INFO =================
+function showInfo(){
+    alert("NGL Spam Tool\nRealtime Statistik\nBy You 😅");
 }
