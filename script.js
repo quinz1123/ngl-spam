@@ -1,4 +1,3 @@
-
 // FIREBASE INIT
 const firebaseConfig = {
   apiKey: "AIzaSyD6YeP5f1AQD-abEjT5puQqT7HhysptLQs",
@@ -37,6 +36,7 @@ const sidebar = document.getElementById("sidebar");
 const overlay = document.getElementById("overlay");
 const statusPage = document.getElementById("statusPage");
 const statPage = document.getElementById("statPage");
+const mainPage = document.getElementById("mainPage");
 
 // Variables
 let isSending = false;
@@ -46,39 +46,64 @@ const totalAttempts = 25;
 let logs = [];
 let currentLink = '';
 let currentPesan = '';
+let lastTouchTime = 0;
+const TOUCH_DELAY = 300; // 300ms delay between touches
 
 // Event Listeners
 window.addEventListener('DOMContentLoaded', function() {
     initApp();
 });
 
-function initApp() {
-    kirimBtn.onclick = showConfirmationModal;
-    resetBtn.onclick = resetForm;
-    clearLogBtn.onclick = clearLogs;
+// Prevent accidental double taps
+function preventDoubleTap(e) {
+    const currentTime = new Date().getTime();
+    const timeDiff = currentTime - lastTouchTime;
     
-    // Fix untuk menghapus efek biru saat tap di mobile
-    menuBtn.addEventListener('click', openSidebar);
-    menuBtn.addEventListener('touchstart', function(e) {
+    if (timeDiff < TOUCH_DELAY) {
         e.preventDefault();
-        openSidebar();
-    }, { passive: false });
+        e.stopPropagation();
+        return false;
+    }
+    
+    lastTouchTime = currentTime;
+    return true;
+}
+
+function initApp() {
+    // Add ripple effect to all buttons
+    addRippleEffectToButtons();
+    
+    // Setup event listeners with debouncing
+    kirimBtn.addEventListener('click', debounce(showConfirmationModal, 300));
+    resetBtn.addEventListener('click', debounce(resetForm, 300));
+    clearLogBtn.addEventListener('click', debounce(clearLogs, 300));
+    
+    // Fix sidebar buttons
+    const sidebarBtns = document.querySelectorAll('.sidebar-btn');
+    sidebarBtns.forEach(btn => {
+        btn.addEventListener('click', debounce(function(e) {
+            if (!preventDoubleTap(e)) return;
+            
+            const page = this.getAttribute('data-page');
+            if (page) {
+                openPage(page);
+            }
+            closeSidebar();
+        }, 300));
+    });
+    
+    // Menu button with ripple
+    menuBtn.addEventListener('click', debounce(openSidebar, 300));
     
     overlay.addEventListener('click', closeSidebar);
-    overlay.addEventListener('touchstart', function(e) {
-        e.preventDefault();
-        closeSidebar();
-    }, { passive: false });
     
     // Setup lihat status button
     if (lihatStatusBtn) {
-        lihatStatusBtn.onclick = openStatusPage;
+        lihatStatusBtn.addEventListener('click', debounce(openStatusPage, 300));
     }
     
-    // Pastikan sidebar dan halaman status tertutup saat startup
-    closeSidebar();
-    closeStatusPage();
-    closeStatistikPage();
+    // Close all pages on startup
+    closeAllPages();
     
     // Initialize counter
     initCounter();
@@ -88,110 +113,215 @@ function initApp() {
         updateStatus("📋 Riwayat Tersedia", "Ada riwayat pengiriman sebelumnya", "fa-history");
     }
     
-    // Setup sidebar untuk mencegah scroll body saat sidebar terbuka
-    setupSidebarScroll();
+    // Setup all button animations
+    setupButtonAnimations();
     
-    // Setup semua tombol untuk mencegah efek biru
-    setupButtonTapEffects();
+    // Add input animations
+    setupInputAnimations();
 }
 
-// Setup tombol untuk mencegah efek biru
-function setupButtonTapEffects() {
-    const allButtons = document.querySelectorAll('button');
-    allButtons.forEach(button => {
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+function addRippleEffectToButtons() {
+    const buttons = document.querySelectorAll('button:not(.no-ripple)');
+    
+    buttons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            // Prevent multiple ripples
+            if (this.classList.contains('rippling')) return;
+            
+            const rect = this.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const ripple = document.createElement('span');
+            ripple.classList.add('ripple');
+            ripple.style.left = x + 'px';
+            ripple.style.top = y + 'px';
+            
+            this.appendChild(ripple);
+            
+            // Add rippling class to prevent multiple ripples
+            this.classList.add('rippling');
+            
+            // Remove ripple after animation
+            setTimeout(() => {
+                ripple.remove();
+                this.classList.remove('rippling');
+            }, 600);
+        });
+    });
+}
+
+function setupButtonAnimations() {
+    const buttons = document.querySelectorAll('.btn-animate');
+    
+    buttons.forEach(button => {
+        button.addEventListener('mousedown', function() {
+            this.style.transform = 'scale(0.95)';
+        });
+        
+        button.addEventListener('mouseup', function() {
+            this.style.transform = 'scale(1)';
+        });
+        
+        button.addEventListener('mouseleave', function() {
+            this.style.transform = 'scale(1)';
+        });
+        
+        // Touch events
         button.addEventListener('touchstart', function(e) {
             e.preventDefault();
+            this.style.transform = 'scale(0.95)';
         }, { passive: false });
         
         button.addEventListener('touchend', function(e) {
             e.preventDefault();
-            this.click();
+            this.style.transform = 'scale(1)';
         }, { passive: false });
     });
 }
 
-// Setup sidebar scroll
-function setupSidebarScroll() {
-    const originalStyle = document.body.style.cssText;
+function setupInputAnimations() {
+    const inputs = document.querySelectorAll('input, textarea');
     
-    menuBtn.addEventListener('click', function() {
-        if (sidebar.classList.contains('active')) {
-            // Enable body scroll
-            document.body.style.cssText = originalStyle;
-        } else {
-            // Disable body scroll
-            document.body.style.overflow = 'hidden';
-            document.body.style.position = 'fixed';
-            document.body.style.width = '100%';
-        }
+    inputs.forEach(input => {
+        input.addEventListener('focus', function() {
+            this.parentElement.classList.add('focused');
+        });
+        
+        input.addEventListener('blur', function() {
+            this.parentElement.classList.remove('focused');
+        });
     });
+}
+
+// PAGE MANAGEMENT
+function openPage(pageId) {
+    closeAllPages();
     
-    overlay.addEventListener('click', function() {
-        // Re-enable body scroll
-        document.body.style.cssText = originalStyle;
-    });
+    switch(pageId) {
+        case 'statusPage':
+            openStatusPage();
+            break;
+        case 'statPage':
+            openStatistikPage();
+            break;
+    }
+}
+
+function closeAllPages() {
+    statusPage.classList.remove("active");
+    statPage.classList.remove("active");
+    mainPage.classList.add("active");
 }
 
 // SIDEBAR FUNCTIONS
 function openSidebar() {
+    if (!preventDoubleTap(new Event('click'))) return;
+    
     sidebar.classList.add("active");
     overlay.classList.add("active");
     
-    // Disable body scroll
-    document.body.style.overflow = 'hidden';
-    document.body.style.position = 'fixed';
-    document.body.style.width = '100%';
+    // Add animation
+    sidebar.style.animation = 'slideInRight 0.3s ease-out';
 }
 
 function closeSidebar() {
     sidebar.classList.remove("active");
     overlay.classList.remove("active");
-    
-    // Re-enable body scroll
-    document.body.style.overflow = '';
-    document.body.style.position = '';
-    document.body.style.width = '';
+    sidebar.style.animation = '';
 }
 
 // STATUS PAGE FUNCTIONS
 function openStatusPage() {
     renderHistory();
     statusPage.classList.add("active");
+    mainPage.classList.remove("active");
     closeSidebar();
+    
+    // Add animation
+    statusPage.style.animation = 'slideInRight 0.3s ease-out';
 }
 
 function closeStatusPage() {
     statusPage.classList.remove("active");
+    mainPage.classList.add("active");
+    statusPage.style.animation = '';
 }
 
 // STATISTIK PAGE FUNCTIONS
 function openStatistikPage() {
     statPage.classList.add("active");
+    mainPage.classList.remove("active");
     closeSidebar();
+    
+    // Add animation
+    statPage.style.animation = 'slideInRight 0.3s ease-out';
 }
 
 function closeStatistikPage() {
     statPage.classList.remove("active");
+    mainPage.classList.add("active");
+    statPage.style.animation = '';
 }
 
 // INFO FUNCTION
 function showInfo() {
-    alert("NGL Spam v2.0\n\nFitur:\n• Kirim 25 pesan ke NGL sekaligus\n• Riwayat pengiriman\n• Statistik pengguna realtime\n• Progress tracking\n• Log aktivitas detail\n\nPastikan link NGL valid!\n\nCreator: Agas");
+    const infoText = "NGL Spam Tool v2.0\n\nFitur:\n• Kirim 25 pesan ke NGL sekaligus\n• Riwayat pengiriman\n• Statistik pengguna realtime\n• Progress tracking\n• Log aktivitas detail\n\nPastikan link NGL valid!\n\nCreator: Agas";
+    
+    // Create custom modal for info
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.innerHTML = `
+        <div class="modal-content info-modal modal-small">
+            <div class="modal-body">
+                <div class="info-content">
+                    <div class="info-icon animate-pulse">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <h4 class="info-title">Info Aplikasi</h4>
+                    <div class="info-text">
+                        ${infoText.replace(/\n/g, '<br>')}
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer-small">
+                <button onclick="this.closest('.modal').remove()" class="btn-close-small btn-animate">
+                    <i class="fas fa-times"></i> Tutup
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
     closeSidebar();
 }
 
 // MAIN FUNCTIONS
 function showConfirmationModal() {
+    if (isSending) return;
+    
     currentLink = linkInput.value.trim();
     currentPesan = pesanInput.value.trim();
 
     if (!currentLink) {
-        alert("Link NGL harus diisi!");
+        showToast("Link NGL harus diisi!", "error");
         return;
     }
     
     if (!currentPesan) {
-        alert("Pesan harus diisi!");
+        showToast("Pesan harus diisi!", "error");
         return;
     }
 
@@ -202,13 +332,19 @@ function showConfirmationModal() {
 
     // Validate NGL link format
     if (!currentLink.includes("ngl.link/")) {
-        if (confirm("Link tidak mengandung 'ngl.link/'. Apakah Anda yakin ini link NGL yang valid?")) {
-            // Continue anyway
-        } else {
-            return;
-        }
+        showConfirmDialog(
+            "Perhatian",
+            "Link tidak mengandung 'ngl.link/'. Apakah Anda yakin ini link NGL yang valid?",
+            () => proceedWithConfirmation(),
+            () => null
+        );
+        return;
     }
+    
+    proceedWithConfirmation();
+}
 
+function proceedWithConfirmation() {
     // Display shortened versions for modal
     const displayLink = currentLink.length > 25 ? currentLink.substring(0, 22) + "..." : currentLink;
     const displayPesan = currentPesan.length > 25 ? currentPesan.substring(0, 22) + "..." : currentPesan;
@@ -216,20 +352,23 @@ function showConfirmationModal() {
     confirmLink.textContent = displayLink;
     confirmPesan.textContent = displayPesan;
     confirmationModal.classList.add("active");
+    document.body.classList.add('modal-open');
 }
 
 function cancelSending() {
     confirmationModal.classList.remove("active");
+    document.body.classList.remove('modal-open');
 }
 
 function confirmSending() {
     confirmationModal.classList.remove("active");
+    document.body.classList.remove('modal-open');
     startSending();
 }
 
 async function startSending() {
     if (isSending) {
-        alert("Sedang mengirim pesan, tunggu hingga selesai!");
+        showToast("Sedang mengirim pesan, tunggu hingga selesai!", "warning");
         return;
     }
     
@@ -240,9 +379,9 @@ async function startSending() {
     failedCount = 0;
     logs = [];
     
-    // UI Reset
+    // UI Reset with animations
     kirimBtn.disabled = true;
-    kirimBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> MENGIRIM...';
+    kirimBtn.innerHTML = '<i class="fas fa-spinner spinner"></i> MENGIRIM...';
     updateProgress(0);
     updateStatus("📤 Mengirim", "Sedang mengirim 25 pesan sekaligus...", "fa-paper-plane");
     
@@ -279,7 +418,7 @@ async function startSending() {
             updateProgress(100);
             progressText.textContent = `100% (25/25)`;
             
-            // Show success log
+            // Show success log with animation
             addLog(`✅ API Response: Berhasil ${sentCount}, Gagal ${failedCount}`, "success");
             
             // Show target username if available
@@ -308,7 +447,7 @@ async function startSending() {
         // Save to history
         saveToHistory();
         
-        // Show success modal after delay
+        // Show success modal after delay with animation
         setTimeout(showSuccessModal, 1000);
     }
 }
@@ -375,18 +514,34 @@ async function sendBulkMessages(link, message) {
 // UI HELPER FUNCTIONS
 function updateProgress(percentage) {
     progressFill.style.width = percentage + "%";
+    // Add bounce animation at 100%
+    if (percentage === 100) {
+        progressFill.style.animation = 'bounce 0.5s';
+        setTimeout(() => {
+            progressFill.style.animation = '';
+        }, 500);
+    }
 }
 
 function updateStatus(title, description, iconClass) {
     statusTitle.textContent = title;
     statusDesc.textContent = description;
     statusIcon.className = "fas " + iconClass;
+    
+    // Add animation
+    statusTitle.style.animation = 'fadeInUp 0.3s';
+    statusDesc.style.animation = 'fadeInUp 0.3s 0.1s';
+    setTimeout(() => {
+        statusTitle.style.animation = '';
+        statusDesc.style.animation = '';
+    }, 400);
 }
 
 function addLog(message, type = "info") {
     const time = new Date().toLocaleTimeString('id-ID', {
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
+        second: '2-digit'
     });
     
     // Remove empty state if present
@@ -395,9 +550,11 @@ function addLog(message, type = "info") {
         emptyState.remove();
     }
     
-    // Create log item
+    // Create log item with animation
     const logItem = document.createElement('div');
     logItem.className = `log-item log-${type}`;
+    logItem.style.opacity = '0';
+    logItem.style.transform = 'translateY(10px)';
     
     // Clean message
     const cleanMessage = message
@@ -413,6 +570,13 @@ function addLog(message, type = "info") {
     // Add to top of log
     logContent.insertBefore(logItem, logContent.firstChild);
     
+    // Animate in
+    setTimeout(() => {
+        logItem.style.opacity = '1';
+        logItem.style.transform = 'translateY(0)';
+        logItem.style.transition = 'all 0.3s ease-out';
+    }, 10);
+    
     // Store in memory (limit to 50 items)
     logs.unshift({ message: cleanMessage, time, type });
     if (logs.length > 50) logs.pop();
@@ -422,32 +586,60 @@ function addLog(message, type = "info") {
 }
 
 function clearLogs() {
-    if (!confirm("Hapus semua log aktivitas?")) return;
-    
-    logs = [];
-    logContent.innerHTML = `
-        <div class="log-empty">
-            <i class="fas fa-clipboard-list"></i>
-            <p>Log aktivitas akan muncul di sini</p>
-        </div>
-    `;
+    showConfirmDialog(
+        "Hapus Log",
+        "Yakin ingin menghapus semua log aktivitas?",
+        () => {
+            logs = [];
+            logContent.innerHTML = `
+                <div class="log-empty">
+                    <i class="fas fa-clipboard-list animate-bounce"></i>
+                    <p>Log aktivitas akan muncul di sini</p>
+                </div>
+            `;
+            showToast("Log berhasil dihapus", "success");
+        },
+        () => null
+    );
 }
 
 function resetForm() {
     if (isSending) {
-        if (!confirm("Pengiriman sedang berjalan. Reset form?")) {
-            return;
-        }
+        showConfirmDialog(
+            "Konfirmasi Reset",
+            "Pengiriman sedang berjalan. Yakin ingin reset form?",
+            () => performReset(),
+            () => null
+        );
+        return;
     }
     
+    performReset();
+}
+
+function performReset() {
     linkInput.value = "";
     pesanInput.value = "";
     linkInput.focus();
+    
+    // Add animation
+    linkInput.style.animation = 'fadeIn 0.5s';
+    pesanInput.style.animation = 'fadeIn 0.5s';
+    setTimeout(() => {
+        linkInput.style.animation = '';
+        pesanInput.style.animation = '';
+    }, 500);
+    
+    showToast("Form berhasil direset", "success");
 }
 
 function showSuccessModal() {
     successCount.textContent = sentCount;
     failCount.textContent = failedCount;
+    
+    // Animate numbers
+    successCount.style.animation = 'countUp 0.8s ease';
+    failCount.style.animation = 'countUp 0.8s ease 0.2s';
     
     // Set result message based on success rate
     if (sentCount === totalAttempts) {
@@ -463,10 +655,12 @@ function showSuccessModal() {
     }
     
     successModal.classList.add("active");
+    document.body.classList.add('modal-open');
 }
 
 function closeSuccessModal() {
     successModal.classList.remove("active");
+    document.body.classList.remove('modal-open');
 }
 
 // UTILITY FUNCTIONS
@@ -483,7 +677,8 @@ function saveToHistory() {
             month: 'short',
             year: 'numeric',
             hour: '2-digit',
-            minute: '2-digit'
+            minute: '2-digit',
+            second: '2-digit'
         }),
         timestamp: new Date().getTime()
     };
@@ -549,6 +744,76 @@ function renderHistory() {
     }
 }
 
+// TOAST NOTIFICATION
+function showToast(message, type = "info") {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.innerHTML = `
+        <div class="toast-content">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Animate in
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 10);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => {
+            toast.remove();
+        }, 300);
+    }, 3000);
+}
+
+// CONFIRM DIALOG
+function showConfirmDialog(title, message, onConfirm, onCancel) {
+    const dialog = document.createElement('div');
+    dialog.className = 'modal active';
+    dialog.innerHTML = `
+        <div class="modal-content confirm-dialog modal-small">
+            <div class="modal-body">
+                <div class="dialog-content">
+                    <div class="dialog-icon animate-pulse">
+                        <i class="fas fa-question-circle"></i>
+                    </div>
+                    <h4 class="dialog-title">${title}</h4>
+                    <p class="dialog-message">${message}</p>
+                </div>
+            </div>
+            <div class="modal-footer-small">
+                <button class="btn-cancel-small btn-animate dialog-cancel">
+                    <i class="fas fa-times"></i> Batal
+                </button>
+                <button class="btn-confirm-small btn-animate dialog-confirm">
+                    <i class="fas fa-check"></i> Ya
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(dialog);
+    document.body.classList.add('modal-open');
+    
+    // Add event listeners
+    dialog.querySelector('.dialog-cancel').addEventListener('click', () => {
+        dialog.remove();
+        document.body.classList.remove('modal-open');
+        if (onCancel) onCancel();
+    });
+    
+    dialog.querySelector('.dialog-confirm').addEventListener('click', () => {
+        dialog.remove();
+        document.body.classList.remove('modal-open');
+        if (onConfirm) onConfirm();
+    });
+}
+
 // VISIT COUNTER - FIXED
 const VISIT_KEY = "ngl_visit_today";
 const visitRef = firebase.firestore().collection("stats").doc("visits");
@@ -580,7 +845,6 @@ async function initCounter() {
             
             // Mark as counted for today
             localStorage.setItem(todayKey, "true");
-            console.log("Visitor counted for today");
             
         } catch (error) {
             console.error("Error updating counter:", error);
@@ -594,7 +858,15 @@ async function initCounter() {
                 const count = doc.data().total || 0;
                 const visitCountElement = document.getElementById("visitCount");
                 if (visitCountElement) {
-                    visitCountElement.innerText = count.toLocaleString('id-ID');
+                    // Animate count change
+                    const oldCount = parseInt(visitCountElement.innerText.replace(/,/g, '')) || 0;
+                    if (count !== oldCount) {
+                        visitCountElement.innerText = count.toLocaleString('id-ID');
+                        visitCountElement.style.animation = 'bounce 0.5s';
+                        setTimeout(() => {
+                            visitCountElement.style.animation = '';
+                        }, 500);
+                    }
                 }
             }
         },
@@ -615,3 +887,138 @@ window.closeStatusPage = closeStatusPage;
 window.openStatistikPage = openStatistikPage;
 window.closeStatistikPage = closeStatistikPage;
 window.showInfo = showInfo;
+window.closeAllPages = closeAllPages;
+
+// Add CSS for new components
+const style = document.createElement('style');
+style.textContent = `
+    .toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: white;
+        padding: 15px 20px;
+        border-radius: 10px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        transform: translateX(150%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 9999;
+        max-width: 300px;
+    }
+    
+    .toast.show {
+        transform: translateX(0);
+    }
+    
+    .toast-success {
+        border-left: 4px solid #10b981;
+    }
+    
+    .toast-error {
+        border-left: 4px solid #dc2626;
+    }
+    
+    .toast-warning {
+        border-left: 4px solid #f59e0b;
+    }
+    
+    .toast-content {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .toast-content i {
+        font-size: 1.2rem;
+    }
+    
+    .toast-success .toast-content i {
+        color: #10b981;
+    }
+    
+    .toast-error .toast-content i {
+        color: #dc2626;
+    }
+    
+    .toast-warning .toast-content i {
+        color: #f59e0b;
+    }
+    
+    .ripple {
+        position: absolute;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.5);
+        transform: scale(0);
+        animation: ripple 0.6s linear;
+        pointer-events: none;
+    }
+    
+    @keyframes ripple {
+        to {
+            transform: scale(4);
+            opacity: 0;
+        }
+    }
+    
+    .info-modal .info-icon {
+        width: 70px;
+        height: 70px;
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        font-size: 2rem;
+        color: white;
+    }
+    
+    .info-title {
+        color: #2d3748;
+        font-size: 1.5rem;
+        margin-bottom: 15px;
+        text-align: center;
+        font-weight: 600;
+    }
+    
+    .info-text {
+        color: #4a5568;
+        line-height: 1.6;
+        text-align: center;
+    }
+    
+    .confirm-dialog .dialog-icon {
+        width: 70px;
+        height: 70px;
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        font-size: 2rem;
+        color: white;
+    }
+    
+    .dialog-title {
+        color: #2d3748;
+        font-size: 1.5rem;
+        margin-bottom: 10px;
+        text-align: center;
+        font-weight: 600;
+    }
+    
+    .dialog-message {
+        color: #4a5568;
+        text-align: center;
+        line-height: 1.5;
+    }
+    
+    .form-group.focused label {
+        color: #667eea;
+        transform: translateY(-2px);
+        transition: all 0.3s;
+    }
+`;
+
+document.head.appendChild(style);
